@@ -20,11 +20,9 @@ enum Gender {
   FEMALE
 }
 
-// ---------- School year ----------
-
 model SchoolYear {
   id        Int      @id @default(autoincrement())
-  label     String   @unique // e.g. "2026-2027"
+  label     String   @unique
   startDate DateTime
   endDate   DateTime
   isCurrent Boolean  @default(false)
@@ -36,8 +34,6 @@ model SchoolYear {
 
   @@map("school_years")
 }
-
-// ---------- Users and profiles ----------
 
 model User {
   id           Int       @id @default(autoincrement())
@@ -91,20 +87,20 @@ model Parent {
 }
 
 model Student {
-  id           Int       @id @default(autoincrement())
-  userId       Int?      @unique // optional login, depending on level
-  user         User?     @relation(fields: [userId], references: [id])
-  matricule    String    @unique
+  id           Int        @id @default(autoincrement())
+  userId       Int?       @unique
+  user         User?      @relation(fields: [userId], references: [id])
+  matricule    String     @unique
   firstName    String
   lastName     String
   birthDate    DateTime
   gender       Gender
   photoUrl     String?
   medicalNotes String?
-  entryYearId  Int       @map("annee_scolaire_entree_id")
+  entryYearId  Int        @map("annee_scolaire_entree_id")
   entryYear    SchoolYear @relation(fields: [entryYearId], references: [id])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   deletedAt    DateTime?
 
   parents     StudentParent[]
@@ -116,7 +112,7 @@ model Student {
 model StudentParent {
   studentId    Int
   parentId     Int
-  relationship String // father, mother, guardian
+  relationship String
   student      Student @relation(fields: [studentId], references: [id])
   parent       Parent  @relation(fields: [parentId], references: [id])
 
@@ -124,12 +120,10 @@ model StudentParent {
   @@map("student_parents")
 }
 
-// ---------- Classes, subjects, rooms ----------
-
 model SchoolClass {
   id                Int        @id @default(autoincrement())
-  level             String // CP, CE1, ...
-  section           String // A, B, ...
+  level             String
+  section           String
   capacity          Int
   schoolYearId      Int        @map("annee_scolaire_id")
   schoolYear        SchoolYear @relation(fields: [schoolYearId], references: [id])
@@ -188,29 +182,26 @@ model Room {
   @@map("rooms")
 }
 
-// Subject <-> teacher <-> class
 model TeachingAssignment {
-  id        Int         @id @default(autoincrement())
-  teacherId Int
-  subjectId Int
-  classId   Int
-  teacher   Teacher     @relation(fields: [teacherId], references: [id])
-  subject   Subject     @relation(fields: [subjectId], references: [id])
+  id          Int         @id @default(autoincrement())
+  teacherId   Int
+  subjectId   Int
+  classId     Int
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
   schoolClass SchoolClass @relation(fields: [classId], references: [id])
-  deletedAt DateTime?
+  deletedAt   DateTime?
 
   @@unique([teacherId, subjectId, classId])
   @@map("teaching_assignments")
 }
 
-// ---------- Audit ----------
-
 model AuditLog {
   id        Int      @id @default(autoincrement())
   userId    Int?
   user      User?    @relation(fields: [userId], references: [id])
-  action    String // CREATE, UPDATE, DELETE
-  entity    String // "SchoolClass", "Student", ...
+  action    String
+  entity    String
   entityId  Int?
   oldValues Json?
   newValues Json?
