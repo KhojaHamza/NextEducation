@@ -38,17 +38,18 @@ model SchoolYear {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique
-  passwordHash String
-  role         Role
-  firstName    String
-  lastName     String
-  phone        String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique
+  passwordHash       String
+  role               Role
+  firstName          String
+  lastName           String
+  phone              String?
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
 
   teacher   Teacher?
   parent    Parent?
