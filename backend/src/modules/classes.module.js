@@ -48,6 +48,8 @@ const service = createCrudService({
     ]);
     if (students > 0) throw new AppError('This class still has students: reassign them first', 409);
     if (assignments > 0) throw new AppError('This class still has teacher assignments', 409);
+        const evaluations = await tx.evaluation.count({ where: { classId: cls.id, deletedAt: null } });
+    if (evaluations > 0) throw new AppError('This class still has evaluations', 409);
   },
 });
 

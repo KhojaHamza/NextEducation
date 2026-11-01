@@ -7,6 +7,7 @@ import { authenticate, authorize } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import * as students from '../services/students.service.js';
 import { exportStudentsCsv, importStudentsCsv } from '../services/studentsCsv.service.js';
+import { getTeacherClassIds } from '../services/access.service.js';
 
 const parentLink = z.object({
   parentId: z.number().int().positive(),
@@ -63,12 +64,27 @@ router.post('/import', authorize(...writeRoles), upload.single('file'), asyncHan
 }));
 
 router.get('/', authorize(...readRoles), asyncHandler(async (req, res) => {
-  const { items, meta } = await students.listStudents(req.query);
+  const scope = req.user.role === 'TEACHER'
+    ? await getTeacherClassIds(req.user.id)
+    : null;
+
+  const { items, meta } = await students.listStudents(req.query, scope);
+
   res.json({ status: 'success', data: items, meta });
 }));
 
 router.get('/:id', authorize(...readRoles), asyncHandler(async (req, res) => {
-  res.json({ status: 'success', data: await students.getStudent(Number(req.params.id)) });
+  const student = await students.getStudent(Number(req.params.id));
+
+  if (req.user.role === 'TEACHER') {
+    const scope = await getTeacherClassIds(req.user.id);
+
+    if (!student.enrollments.some((e) => scope.includes(e.classId))) {
+      throw new AppError('Student not found', 404);
+    }
+  }
+
+  res.json({ status: 'success', data: student });
 }));
 
 router.post('/', authorize(...writeRoles), validate(createSchema), asyncHandler(async (req, res) => {

@@ -24,7 +24,8 @@ const writeRoles = ['ADMIN', 'ACCOUNTANT'];
 
 router.get('/', authorize(...readRoles), asyncHandler(async (req, res) => {
   const where = { deletedAt: null };
-  if (req.query.classId) where.classId = Number(req.query.classId);
+  const classId = await classFilterFor(req.user, optionalInt(req.query.classId, 'classId'));
+  if (classId !== undefined) where.classId = classId;
   if (req.query.schoolYearId) where.schoolYearId = Number(req.query.schoolYearId);
   const items = await prisma.enrollment.findMany({
     where, include, take: 500,
