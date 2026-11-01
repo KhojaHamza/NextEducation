@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,4 +5,209 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  PARENT
+  STUDENT
+  ACCOUNTANT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+model SchoolYear {
+  id        Int       @id @default(autoincrement())
+  label     String    @unique
+  startDate DateTime
+  endDate   DateTime
+  isCurrent Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  classes     SchoolClass[]
+  enrollments Enrollment[]
+  students    Student[]
+
+  @@map("school_years")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String
+  role         Role
+  firstName    String
+  lastName     String
+  phone        String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  teacher   Teacher?
+  parent    Parent?
+  student   Student?
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Teacher {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @unique
+  user       User      @relation(fields: [userId], references: [id])
+  speciality String?
+  hiredAt    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  homeroomClasses SchoolClass[]
+  assignments     TeachingAssignment[]
+
+  @@map("teachers")
+}
+
+model Parent {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique
+  user      User      @relation(fields: [userId], references: [id])
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  children StudentParent[]
+
+  @@map("parents")
+}
+
+model Student {
+  id           Int        @id @default(autoincrement())
+  userId       Int?       @unique
+  user         User?      @relation(fields: [userId], references: [id])
+  matricule    String     @unique
+  firstName    String
+  lastName     String
+  birthDate    DateTime
+  gender       Gender
+  photoUrl     String?
+  medicalNotes String?
+  entryYearId  Int        @map("annee_scolaire_entree_id")
+  entryYear    SchoolYear @relation(fields: [entryYearId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  parents     StudentParent[]
+  enrollments Enrollment[]
+
+  @@map("students")
+}
+
+model StudentParent {
+  studentId    Int
+  parentId     Int
+  relationship String
+  student      Student @relation(fields: [studentId], references: [id])
+  parent       Parent  @relation(fields: [parentId], references: [id])
+
+  @@id([studentId, parentId])
+  @@map("student_parents")
+}
+
+model SchoolClass {
+  id                Int        @id @default(autoincrement())
+  level             String
+  section           String
+  capacity          Int
+  schoolYearId      Int        @map("annee_scolaire_id")
+  schoolYear        SchoolYear @relation(fields: [schoolYearId], references: [id])
+  homeroomTeacherId Int?
+  homeroomTeacher   Teacher?   @relation(fields: [homeroomTeacherId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  enrollments Enrollment[]
+  assignments TeachingAssignment[]
+
+  @@unique([level, section, schoolYearId])
+  @@map("classes")
+}
+
+model Enrollment {
+  id           Int         @id @default(autoincrement())
+  studentId    Int
+  classId      Int
+  schoolYearId Int         @map("annee_scolaire_id")
+  student      Student     @relation(fields: [studentId], references: [id])
+  schoolClass  SchoolClass @relation(fields: [classId], references: [id])
+  schoolYear   SchoolYear  @relation(fields: [schoolYearId], references: [id])
+  enrolledAt   DateTime    @default(now())
+  deletedAt    DateTime?
+
+  @@unique([studentId, schoolYearId])
+  @@map("enrollments")
+}
+
+model Subject {
+  id          Int       @id @default(autoincrement())
+  name        String
+  coefficient Decimal   @db.Decimal(4, 2)
+  level       String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  assignments TeachingAssignment[]
+
+  @@unique([name, level])
+  @@map("subjects")
+}
+
+model Room {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  capacity    Int
+  isAvailable Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("rooms")
+}
+
+model TeachingAssignment {
+  id          Int         @id @default(autoincrement())
+  teacherId   Int
+  subjectId   Int
+  classId     Int
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  deletedAt   DateTime?
+
+  @@unique([teacherId, subjectId, classId])
+  @@map("teaching_assignments")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  Int?
+  oldValues Json?
+  newValues Json?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
 }
