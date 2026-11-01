@@ -307,3 +307,90 @@ model Absence {
   @@index([classId, date])
   @@map("absences")
 }
+enum FeeType {
+  REGISTRATION
+  TUITION
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model FeeItem {
+  id           Int       @id @default(autoincrement())
+  schoolYearId Int       @map("annee_scolaire_id")
+  name         String
+  type         FeeType
+  level        String? // null = applies to every level
+  amount       Decimal   @db.Decimal(10, 3)
+  dueDate      DateTime  @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id])
+
+  @@index([schoolYearId])
+  @@map("fee_items")
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  receiptNumber String        @unique
+  studentId     Int
+  schoolYearId  Int           @map("annee_scolaire_id")
+  amount        Decimal       @db.Decimal(10, 3)
+  method        PaymentMethod
+  reference     String?
+  note          String?
+  paidAt        DateTime      @db.Date
+  recordedById  Int?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  cancelledById Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  student     Student    @relation(fields: [studentId], references: [id])
+  schoolYear  SchoolYear @relation(fields: [schoolYearId], references: [id])
+  recordedBy  User?      @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  cancelledBy User?      @relation("PaymentCancelledBy", fields: [cancelledById], references: [id])
+
+  @@index([studentId, schoolYearId])
+  @@map("payments")
+}
+
+model Notification {
+  id        Int                 @id @default(autoincrement())
+  userId    Int
+  type      String // PAYMENT_RECEIVED, PAYMENT_REMINDER, PAYMENT_CANCELLED...
+  channel   NotificationChannel
+  title     String
+  body      String
+  data      Json?
+  status    NotificationStatus
+  error     String?
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@map("notifications")
+}
