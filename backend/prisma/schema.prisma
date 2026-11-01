@@ -20,6 +20,15 @@ enum Gender {
   FEMALE
 }
 
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
 model SchoolYear {
   id        Int       @id @default(autoincrement())
   label     String    @unique
@@ -84,6 +93,7 @@ model Teacher {
 
   homeroomClasses SchoolClass[]
   assignments     TeachingAssignment[]
+  timetableSlots  TimetableSlot[]
 
   @@map("teachers")
 }
@@ -153,10 +163,11 @@ model SchoolClass {
   updatedAt         DateTime   @updatedAt
   deletedAt         DateTime?
 
-  enrollments Enrollment[]
-  assignments TeachingAssignment[]
-  evaluations Evaluation[]
-  absences    Absence[]
+  enrollments    Enrollment[]
+  assignments    TeachingAssignment[]
+  evaluations    Evaluation[]
+  absences       Absence[]
+  timetableSlots TimetableSlot[]
 
   @@unique([level, section, schoolYearId])
   @@map("classes")
@@ -186,8 +197,9 @@ model Subject {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  assignments TeachingAssignment[]
-  evaluations Evaluation[]
+  assignments    TeachingAssignment[]
+  evaluations    Evaluation[]
+  timetableSlots TimetableSlot[]
 
   @@unique([name, level])
   @@map("subjects")
@@ -201,6 +213,8 @@ model Room {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
+
+  timetableSlots TimetableSlot[]
 
   @@map("rooms")
 }
@@ -519,4 +533,28 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+model TimetableSlot {
+  id          Int       @id @default(autoincrement())
+  classId     Int
+  subjectId   Int
+  teacherId   Int
+  roomId      Int?
+  dayOfWeek   DayOfWeek
+  startMinute Int // minutes since midnight: 8h30 = 510
+  endMinute   Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  room        Room?       @relation(fields: [roomId], references: [id])
+
+  @@index([classId, dayOfWeek])
+  @@index([teacherId, dayOfWeek])
+  @@index([roomId, dayOfWeek])
+  @@map("timetable_slots")
 }
