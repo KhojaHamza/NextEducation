@@ -21,12 +21,14 @@ enum Gender {
 }
 
 model SchoolYear {
-  id        Int      @id @default(autoincrement())
-  label     String   @unique
+  id        Int       @id @default(autoincrement())
+  label     String    @unique
   startDate DateTime
   endDate   DateTime
-  isCurrent Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isCurrent Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
 
   classes     SchoolClass[]
   enrollments Enrollment[]
