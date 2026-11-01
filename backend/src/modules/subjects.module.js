@@ -24,6 +24,8 @@ const service = createCrudService({
     });
     if (assignments > 0) throw new AppError('This subject is assigned to teachers', 409);
     // When grades exist (step 6), we'll add a check for them here
+    const evaluations = await tx.evaluation.count({ where: { subjectId: subject.id, deletedAt: null } });
+    if (evaluations > 0) throw new AppError('This subject has evaluations', 409);
   },
 });
 

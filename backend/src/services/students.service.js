@@ -80,7 +80,7 @@ export const createStudent = (data, userId) =>
     return createStudentRecord(tx, { data: { ...data, entryYearId }, matricule, userId });
   });
 
-export const listStudents = async (query) => {
+export const listStudents = async (query, classScope = null) => {
   const page = Math.max(Number(query.page) || 1, 1);
   const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100);
   const where = { deletedAt: null };

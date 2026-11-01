@@ -15,6 +15,10 @@ import parentsRoutes from './modules/parents.module.js';
 import studentsRoutes from './modules/students.module.js';
 import enrollmentsRoutes from './modules/enrollments.module.js';
 import teachingAssignmentsRoutes from './modules/teachingAssignments.module.js';
+import evaluationsRoutes from './modules/evaluations.module.js';
+import absencesRoutes from './modules/absences.module.js';
+import reportCardsRoutes from './modules/reportCards.module.js';
+
 
 const app = express();
 
@@ -36,7 +40,9 @@ app.use('/api/parents', parentsRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/enrollments', enrollmentsRoutes);
 app.use('/api/teaching-assignments', teachingAssignmentsRoutes);
-
+app.use('/api/evaluations', evaluationsRoutes);
+app.use('/api/absences', absencesRoutes);
+app.use('/api/report-cards', reportCardsRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
