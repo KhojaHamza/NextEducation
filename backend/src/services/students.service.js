@@ -152,6 +152,9 @@ export const deleteStudent = (id, userId, { confirm = false } = {}) =>
     const now = new Date();
     await tx.enrollment.updateMany({ where: { studentId: id, deletedAt: null }, data: { deletedAt: now } });
     await tx.student.update({ where: { id }, data: { deletedAt: now } });
+        if (before.userId) {
+      await tx.user.update({ where: { id: before.userId }, data: { deletedAt: now, isActive: false } });
+    }
     await logAudit(tx, { userId, action: 'DELETE', entity: 'Student', entityId: id, oldValues: before });
   });
 

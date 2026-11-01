@@ -8,7 +8,9 @@ import { validate } from '../middlewares/validate.js';
 import * as students from '../services/students.service.js';
 import { exportStudentsCsv, importStudentsCsv } from '../services/studentsCsv.service.js';
 import { getTeacherClassIds } from '../services/access.service.js';
-
+import { prisma } from '../config/prisma.js';
+import { logAudit } from '../core/audit.service.js';
+import { createUserAccount } from '../services/userAccount.service.js';
 const parentLink = z.object({
   parentId: z.number().int().positive(),
   relationship: z.enum(['father', 'mother', 'guardian']),
@@ -106,6 +108,27 @@ router.delete('/:id', authorize(...writeRoles), asyncHandler(async (req, res) =>
 router.delete('/:id', authorize(...writeRoles), asyncHandler(async (req, res) => {
   await students.deleteStudent(Number(req.params.id), req.user.id, { confirm: req.query.confirm === 'true' });
   res.json({ status: 'success', message: 'Deleted' });
+}));
+const accountSchema = z.object({ email: z.string().trim().toLowerCase().email() });
+
+// Optional login for a student (read-only access, messaging with the administration)
+router.post('/:id/account', authorize(...writeRoles), validate(accountSchema), asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  const result = await prisma.$transaction(async (tx) => {
+    const student = await tx.student.findFirst({ where: { id, deletedAt: null } });
+    if (!student) throw new AppError('Student not found', 404);
+    if (student.userId) throw new AppError('This student already has an account', 409);
+
+    const { user, tempPassword } = await createUserAccount(tx, {
+      email: req.body.email, firstName: student.firstName, lastName: student.lastName, role: 'STUDENT',
+    });
+    await tx.student.update({ where: { id }, data: { userId: user.id } });
+    await logAudit(tx, {
+      userId: req.user.id, action: 'UPDATE', entity: 'Student', entityId: id, newValues: { accountUserId: user.id },
+    });
+    return { user, tempPassword };
+  });
+  res.status(201).json({ status: 'success', data: result.user, tempPassword: result.tempPassword });
 }));
 
 export default router;
