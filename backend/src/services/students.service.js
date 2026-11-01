@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { logAudit } from '../core/audit.service.js';
 import { enrollStudent } from './enrollment.service.js';
+import { getUnpaidYears } from './account.service.js';
 
 const contact = { select: { id: true, email: true, firstName: true, lastName: true, phone: true } };
 
@@ -138,14 +139,20 @@ export const setParents = (id, parents, userId) =>
     return after;
   });
 
-export const deleteStudent = (id, userId) =>
+export const deleteStudent = (id, userId, { confirm = false } = {}) =>
   prisma.$transaction(async (tx) => {
     const before = await findActive(tx, id);
+
+    const unpaid = await getUnpaidYears(tx, id);
+    if (unpaid.length && !confirm) {
+      const detail = unpaid.map((u) => `${u.balance} for ${u.label}`).join(', ');
+      throw new AppError(`This student has an unpaid balance (${detail}): add ?confirm=true to delete anyway`, 409);
+    }
+
     const now = new Date();
     await tx.enrollment.updateMany({ where: { studentId: id, deletedAt: null }, data: { deletedAt: now } });
     await tx.student.update({ where: { id }, data: { deletedAt: now } });
     await logAudit(tx, { userId, action: 'DELETE', entity: 'Student', entityId: id, oldValues: before });
-    // Step 7 will add a check here for unpaid balances
   });
 
 // Row-level rule: a parent only sees their own children
