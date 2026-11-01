@@ -26,6 +26,8 @@ import messagesRoutes from './modules/messages.module.js';
 import announcementsRoutes from './modules/announcements.module.js';
 import pushRoutes from './routes/push.routes.js';
 
+import timetableRoutes from './modules/timetable.module.js';
+
 
 
 const app = express();
@@ -61,5 +63,5 @@ app.use('/api/messages', messagesRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/push', pushRoutes);
 
-
+app.use('/api/timetable', timetableRoutes);
 export default app;
