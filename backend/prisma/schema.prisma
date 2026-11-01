@@ -33,6 +33,7 @@ model SchoolYear {
   classes     SchoolClass[]
   enrollments Enrollment[]
   students    Student[]
+  absences    Absence[]
 
   @@map("school_years")
 }
@@ -55,6 +56,7 @@ model User {
   parent    Parent?
   student   Student?
   auditLogs AuditLog[]
+  absences  Absence[]
 
   @@map("users")
 }
@@ -108,6 +110,8 @@ model Student {
 
   parents     StudentParent[]
   enrollments Enrollment[]
+  grades      Grade[]
+  absences    Absence[]
 
   @@map("students")
 }
@@ -138,6 +142,8 @@ model SchoolClass {
 
   enrollments Enrollment[]
   assignments TeachingAssignment[]
+  evaluations Evaluation[]
+  absences    Absence[]
 
   @@unique([level, section, schoolYearId])
   @@map("classes")
@@ -168,6 +174,7 @@ model Subject {
   deletedAt   DateTime?
 
   assignments TeachingAssignment[]
+  evaluations Evaluation[]
 
   @@unique([name, level])
   @@map("subjects")
@@ -211,4 +218,92 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@map("audit_logs")
+}
+
+enum Term {
+  T1
+  T2
+  T3
+}
+
+enum EvaluationType {
+  CONTINUOUS
+  EXAM
+}
+
+enum AbsencePeriod {
+  MORNING
+  AFTERNOON
+}
+
+enum JustificationStatus {
+  NONE
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Evaluation {
+  id        Int            @id @default(autoincrement())
+  title     String
+  type      EvaluationType
+  term      Term
+  date      DateTime       @db.Date
+  maxScore  Decimal        @default(20) @db.Decimal(5, 2)
+  weight    Decimal        @default(1) @db.Decimal(4, 2)
+  classId   Int
+  subjectId Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  deletedAt DateTime?
+
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  grades      Grade[]
+
+  @@index([classId, subjectId, term])
+  @@map("evaluations")
+}
+
+model Grade {
+  id           Int       @id @default(autoincrement())
+  evaluationId Int
+  studentId    Int
+  score        Decimal   @db.Decimal(5, 2)
+  comment      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  student    Student    @relation(fields: [studentId], references: [id])
+
+  @@unique([evaluationId, studentId])
+  @@map("grades")
+}
+
+model Absence {
+  id                  Int                 @id @default(autoincrement())
+  studentId           Int
+  classId             Int
+  schoolYearId        Int                 @map("annee_scolaire_id")
+  date                DateTime            @db.Date
+  period              AbsencePeriod
+  justificationStatus JustificationStatus @default(NONE)
+  justificationReason String?
+  reviewNote          String?
+  reviewedAt          DateTime?
+  recordedById        Int?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  deletedAt           DateTime?
+
+  student     Student     @relation(fields: [studentId], references: [id])
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  schoolYear  SchoolYear  @relation(fields: [schoolYearId], references: [id])
+  recordedBy  User?       @relation(fields: [recordedById], references: [id])
+
+  @@unique([studentId, date, period])
+  @@index([classId, date])
+  @@map("absences")
 }
