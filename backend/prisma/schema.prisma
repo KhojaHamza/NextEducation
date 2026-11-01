@@ -34,6 +34,8 @@ model SchoolYear {
   enrollments Enrollment[]
   students    Student[]
   absences    Absence[]
+  feeItems    FeeItem[]
+  payments    Payment[]
 
   @@map("school_years")
 }
@@ -56,7 +58,16 @@ model User {
   parent    Parent?
   student   Student?
   auditLogs AuditLog[]
-  absences  Absence[]
+
+  absencesRecorded      Absence[]
+  notifications         Notification[]
+  paymentsRecorded      Payment[]          @relation("PaymentRecordedBy")
+  paymentsCancelled     Payment[]          @relation("PaymentCancelledBy")
+  messagesSent          Message[]          @relation("MessageSender")
+  messagesReceived      MessageRecipient[]
+  messageAccessLogs     MessageAccessLog[]
+  announcementsAuthored Announcement[]     @relation("AnnouncementAuthor")
+  pushSubscriptions     PushSubscription[]
 
   @@map("users")
 }
@@ -112,6 +123,8 @@ model Student {
   enrollments Enrollment[]
   grades      Grade[]
   absences    Absence[]
+  payments    Payment[]
+  messages    Message[]
 
   @@map("students")
 }
@@ -307,6 +320,7 @@ model Absence {
   @@index([classId, date])
   @@map("absences")
 }
+
 enum FeeType {
   REGISTRATION
   TUITION
@@ -322,6 +336,7 @@ enum PaymentMethod {
 enum NotificationChannel {
   IN_APP
   EMAIL
+  PUSH
 }
 
 enum NotificationStatus {
@@ -393,4 +408,115 @@ model Notification {
   @@index([userId, createdAt])
   @@index([type, createdAt])
   @@map("notifications")
+}
+
+enum MessageStatus {
+  DRAFT
+  SENT
+}
+
+enum MessageAccessAction {
+  VIEW_THREAD
+  DOWNLOAD_ATTACHMENT
+}
+
+model Message {
+  id        Int           @id @default(autoincrement())
+  threadId  Int? // root message of the conversation; null for the root itself
+  senderId  Int
+  studentId Int? // the child the conversation is about
+  subject   String        @default("")
+  body      String        @default("")
+  important Boolean       @default(false)
+  status    MessageStatus @default(DRAFT)
+  sentAt    DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  sender      User                @relation("MessageSender", fields: [senderId], references: [id])
+  student     Student?            @relation(fields: [studentId], references: [id])
+  thread      Message?            @relation("MessageThread", fields: [threadId], references: [id])
+  replies     Message[]           @relation("MessageThread")
+  recipients  MessageRecipient[]
+  attachments MessageAttachment[]
+
+  @@index([threadId])
+  @@index([senderId, status])
+  @@map("messages")
+}
+
+model MessageRecipient {
+  messageId Int
+  userId    Int
+  readAt    DateTime?
+  hiddenAt  DateTime? // recipient-side deletion: hides the message from this user's inbox only
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId])
+  @@index([userId, hiddenAt])
+  @@map("message_recipients")
+}
+
+model MessageAttachment {
+  id         Int      @id @default(autoincrement())
+  messageId  Int
+  fileName   String // original name, display only
+  mimeType   String
+  size       Int
+  storageKey String   @unique // random name on disk, never the original name
+  createdAt  DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_attachments")
+}
+
+model MessageAccessLog {
+  id           Int                 @id @default(autoincrement())
+  userId       Int
+  threadId     Int
+  messageId    Int?
+  attachmentId Int?
+  action       MessageAccessAction
+  createdAt    DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([threadId, createdAt])
+  @@index([userId, createdAt])
+  @@map("message_access_logs")
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  title       String
+  body        String
+  audience    Role[]
+  correctsId  Int? // set when this announcement corrects an earlier one
+  authorId    Int
+  publishedAt DateTime @default(now())
+
+  author      User           @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  corrects    Announcement?  @relation("AnnouncementCorrection", fields: [correctsId], references: [id])
+  corrections Announcement[] @relation("AnnouncementCorrection")
+
+  @@index([publishedAt])
+  @@map("announcements")
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

@@ -18,6 +18,14 @@ import teachingAssignmentsRoutes from './modules/teachingAssignments.module.js';
 import evaluationsRoutes from './modules/evaluations.module.js';
 import absencesRoutes from './modules/absences.module.js';
 import reportCardsRoutes from './modules/reportCards.module.js';
+import feeItemsRoutes from './modules/feeItems.module.js';
+import paymentsRoutes from './modules/payments.module.js';
+import notificationsRoutes from './routes/notifications.routes.js';
+import usersRoutes from './modules/users.module.js';
+import messagesRoutes from './modules/messages.module.js';
+import announcementsRoutes from './modules/announcements.module.js';
+import pushRoutes from './routes/push.routes.js';
+
 
 
 const app = express();
@@ -45,5 +53,13 @@ app.use('/api/absences', absencesRoutes);
 app.use('/api/report-cards', reportCardsRoutes);
 app.use(notFound);
 app.use(errorHandler);
+app.use('/api/fee-items', feeItemsRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/messages', messagesRoutes);
+app.use('/api/announcements', announcementsRoutes);
+app.use('/api/push', pushRoutes);
+
 
 export default app;

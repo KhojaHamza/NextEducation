@@ -18,11 +18,11 @@ const fromPrisma = (err) => {
       return null;
   }
 };
-
+    
 // Translates upload errors (file too large, etc.)
 const fromMulter = (err) =>
   err?.name === 'MulterError'
-    ? new AppError(err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 2 MB)' : err.message, 400)
+    ? new AppError(err.code === 'LIMIT_FILE_SIZE' ? 'File too large' : err.message, 400)
     : null;
 
 export const errorHandler = (err, req, res, next) => {

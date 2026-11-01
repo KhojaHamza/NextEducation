@@ -48,6 +48,8 @@ const service = createCrudService({
     if (classes > 0 || students > 0) {
       throw new AppError('This school year still has classes or students', 409);
     }
+        const fees = await tx.feeItem.count({ where: { schoolYearId: year.id, deletedAt: null } });
+    if (fees > 0) throw new AppError('This school year still has fee items', 409);
   },
 });
 

@@ -7,7 +7,7 @@ export const userSelect = {
   role: true, isActive: true, mustChangePassword: true, createdAt: true,
 };
 
-const generateTempPassword = () => {
+export const generateTempPassword = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   const body = Array.from({ length: 10 }, () => chars[crypto.randomInt(chars.length)]).join('');
   return `${body}${crypto.randomInt(10, 100)}`;
