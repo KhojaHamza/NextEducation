@@ -22,7 +22,7 @@ export const setSessionExpiredHandler = (fn) => {
   onSessionExpired = fn;
 };
 
-export async function api(path, { method = 'GET', body, signal } = {}) {
+export async function api(path, { method = 'GET', body, signal, expireSession = true } = {}) {
   const token = tokenStore.get();
   let response;
 
@@ -45,7 +45,7 @@ export async function api(path, { method = 'GET', body, signal } = {}) {
 
   if (!response.ok) {
     // A 401 while we hold a token means the session is over (the JWT lasts 1 hour)
-    if (response.status === 401 && token) {
+    if (response.status === 401 && token && expireSession) {
       tokenStore.clear();
       onSessionExpired();
     }
