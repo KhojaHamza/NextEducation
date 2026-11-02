@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* Design tokens: one place to change a color or a font for the whole app */
+@theme {
+  --color-ink: #1E2A4A;
+  --color-sky: #1F6FEB;
+  --color-sun: #FFC933;
+  --color-meadow: #2DBE7E;
+  --color-coral: #FF6B5B;
+  --color-grape: #7C5CFA;
+  --color-cloud: #F4F8FF;
+  --color-paper: #FFFFFF;
+
+  --font-display: "Fredoka", ui-rounded, system-ui, sans-serif;
+  --font-sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    background: var(--color-cloud);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+  }
+  /* Keyboard users must always see where they are */
+  :focus-visible {
+    outline: 3px solid var(--color-sky);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
