@@ -6,6 +6,7 @@ import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
+import StudentsPage from './features/students/StudentsPage.jsx';
 import AppShell from './layouts/AppShell.jsx';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path={PASSWORD_PATH} element={<ChangePasswordPage />} />
       </Route>
 
+      {/* Home page of each role */}
       {Object.entries(roleHome).map(([role, path]) => (
         <Route key={role} element={<ProtectedRoute roles={[role]} />}>
           <Route element={<AppShell />}>
@@ -25,6 +27,13 @@ export default function App() {
           </Route>
         </Route>
       ))}
+
+      {/* Administration pages */}
+      <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+        <Route element={<AppShell />}>
+          <Route path="/admin/eleves" element={<StudentsPage />} />
+        </Route>
+      </Route>
 
       <Route path="*" element={<HomeRedirect />} />
     </Routes>
