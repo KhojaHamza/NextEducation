@@ -22,8 +22,11 @@ export const setSessionExpiredHandler = (fn) => {
   onSessionExpired = fn;
 };
 
-export async function api(path, { method = 'GET', body, signal, expireSession = true } = {}) {
+// body: a plain object (sent as JSON) or a FormData (file upload)
+// asBlob: the answer is a file, returned as { blob, filename }
+export async function api(path, { method = 'GET', body, signal, expireSession = true, asBlob = false } = {}) {
   const token = tokenStore.get();
+  const isForm = body instanceof FormData;
   let response;
 
   try {
@@ -31,14 +34,21 @@ export async function api(path, { method = 'GET', body, signal, expireSession = 
       method,
       signal,
       headers: {
-        ...(body !== undefined && { 'Content-Type': 'application/json' }),
+        // For a FormData the browser sets the Content-Type itself (it must contain the file boundary)
+        ...(body !== undefined && !isForm && { 'Content-Type': 'application/json' }),
         ...(token && { Authorization: `Bearer ${token}` }),
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     });
   } catch (err) {
     if (err.name === 'AbortError') throw err;
     throw new ApiError('Impossible de joindre le serveur. Vérifie ta connexion.', 0);
+  }
+
+  if (response.ok && asBlob) {
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1];
+    return { blob: await response.blob(), filename };
   }
 
   const data = await response.json().catch(() => null);

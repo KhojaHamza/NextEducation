@@ -102,10 +102,6 @@ router.put('/:id/parents', authorize(...writeRoles), validate(parentsSchema), as
 }));
 
 router.delete('/:id', authorize(...writeRoles), asyncHandler(async (req, res) => {
-  await students.deleteStudent(Number(req.params.id), req.user.id);
-  res.json({ status: 'success', message: 'Deleted' });
-}));
-router.delete('/:id', authorize(...writeRoles), asyncHandler(async (req, res) => {
   await students.deleteStudent(Number(req.params.id), req.user.id, { confirm: req.query.confirm === 'true' });
   res.json({ status: 'success', message: 'Deleted' });
 }));
