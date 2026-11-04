@@ -1,4 +1,4 @@
-import { GraduationCap, House, Presentation, School, Users } from 'lucide-react';
+import { CalendarDays, GraduationCap, House, Presentation, School, Users } from 'lucide-react';
 import { roleHome } from './roleHome.js';
 
 // Only pages that already exist are listed here.
@@ -8,6 +8,7 @@ const adminPages = [
   { to: '/admin/classes', label: 'Classes', icon: School },
   { to: '/admin/enseignants', label: 'Enseignants', icon: Presentation },
   { to: '/admin/parents', label: 'Parents', icon: Users },
+  { to: '/admin/annees', label: 'Années scolaires', icon: CalendarDays },
 ];
 
 export const navigationFor = (role) => [

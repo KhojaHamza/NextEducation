@@ -5,10 +5,12 @@ import { PASSWORD_PATH, roleHome } from './app/roleHome.js';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
+import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
 import { peopleConfig } from './features/people/config.js';
 import PeoplePage from './features/people/PeoplePage.jsx';
+import SchoolYearsPage from './features/schoolYears/SchoolYearsPage.jsx';
 import StudentDetailPage from './features/students/StudentDetailPage.jsx';
 import StudentFormPage from './features/students/StudentFormPage.jsx';
 import StudentsPage from './features/students/StudentsPage.jsx';
@@ -24,11 +26,11 @@ export default function App() {
         <Route path={PASSWORD_PATH} element={<ChangePasswordPage />} />
       </Route>
 
-      {/* Home page of each role */}
+      {/* Home page of each role (only the administrator has a real dashboard for now) */}
       {Object.entries(roleHome).map(([role, path]) => (
         <Route key={role} element={<ProtectedRoute roles={[role]} />}>
           <Route element={<AppShell />}>
-            <Route path={path} element={<DashboardPlaceholder />} />
+            <Route path={path} element={role === 'ADMIN' ? <AdminDashboard /> : <DashboardPlaceholder />} />
           </Route>
         </Route>
       ))}
@@ -44,6 +46,7 @@ export default function App() {
           {/* The key makes React start fresh (search, page) when switching between the two */}
           <Route path="/admin/enseignants" element={<PeoplePage key="teachers" config={peopleConfig.teachers} />} />
           <Route path="/admin/parents" element={<PeoplePage key="parents" config={peopleConfig.parents} />} />
+          <Route path="/admin/annees" element={<SchoolYearsPage />} />
         </Route>
       </Route>
 

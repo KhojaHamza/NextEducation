@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CircleCheck, Pencil, SearchX, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, CircleCheck, Pencil, Plus, SearchX, Trash2, UserPlus } from 'lucide-react';
 import Alert from '../../components/ui/Alert.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -8,15 +8,23 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import PageHeader from '../../components/ui/PageHeader.jsx';
 import { useToast } from '../../hooks/useToast.js';
+import { useSchoolYears } from '../classes/hooks.js';
 import CreateAccountModal from './CreateAccountModal.jsx';
+import EnrollmentModal from './EnrollmentModal.jsx';
 import { messageFor } from './errors.js';
 import { classLabel, formatDate, genderLabel, relationLabel } from './format.js';
 import { useStudent, useStudentMutations } from './hooks.js';
+import { linkMessageFor } from './linkErrors.js';
+import { useStudentLinks } from './linkHooks.js';
+import ParentsModal from './ParentsModal.jsx';
 
-function Section({ title, children }) {
+function Section({ title, action, children }) {
   return (
     <section className="rounded-2xl bg-paper p-6">
-      <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        {action}
+      </div>
       {children}
     </section>
   );
@@ -37,9 +45,14 @@ export default function StudentDetailPage() {
   const toast = useToast();
   const { data: student, error, isPending, refetch } = useStudent(id);
   const { remove } = useStudentMutations();
+  const { unenroll } = useStudentLinks();
+  const years = useSchoolYears();
 
   const [deleteStep, setDeleteStep] = useState(null); // null | 'ask' | 'unpaid'
   const [accountOpen, setAccountOpen] = useState(false);
+  const [enrollment, setEnrollment] = useState({ open: false, record: null });
+  const [removing, setRemoving] = useState(null);
+  const [parentsOpen, setParentsOpen] = useState(false);
 
   const back = (
     <Link
@@ -82,6 +95,7 @@ export default function StudentDetailPage() {
 
   const enrollments = student.enrollments ?? [];
   const parents = student.parents ?? [];
+  const yearLabel = (yearId) => (years.data ?? []).find((y) => y.id === yearId)?.label;
 
   const handleDelete = async (confirm) => {
     try {
@@ -97,6 +111,16 @@ export default function StudentDetailPage() {
       setDeleteStep(null);
       toast.error(messageFor(err));
     }
+  };
+
+  const confirmUnenroll = async () => {
+    try {
+      await unenroll.mutateAsync(removing.id);
+      toast.success('Inscription retirée.');
+    } catch (err) {
+      toast.error(linkMessageFor(err));
+    }
+    setRemoving(null);
   };
 
   return (
@@ -133,12 +157,31 @@ export default function StudentDetailPage() {
           </div>
         </Section>
 
-        <Section title="Scolarité">
+        <Section
+          title="Scolarité"
+          action={
+            <Button variant="secondary" onClick={() => setEnrollment({ open: true, record: null })}>
+              <Plus className="size-4" aria-hidden="true" />
+              Inscrire
+            </Button>
+          }
+        >
           {enrollments.length ? (
-            <ul className="flex flex-wrap gap-2">
+            <ul className="space-y-3">
               {enrollments.map((e) => (
-                <li key={e.id}>
-                  <Badge tone="info">{classLabel(e.schoolClass)}</Badge>
+                <li key={e.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="info">{classLabel(e.schoolClass)}</Badge>
+                    {yearLabel(e.schoolYearId) && <span className="text-sm text-ink/70">{yearLabel(e.schoolYearId)}</span>}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <Button variant="ghost" onClick={() => setEnrollment({ open: true, record: e })}>
+                      Changer de classe
+                    </Button>
+                    <Button variant="ghost" onClick={() => setRemoving(e)}>
+                      Retirer
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -147,7 +190,15 @@ export default function StudentDetailPage() {
           )}
         </Section>
 
-        <Section title="Parents">
+        <Section
+          title="Parents"
+          action={
+            <Button variant="secondary" onClick={() => setParentsOpen(true)}>
+              <Pencil className="size-4" aria-hidden="true" />
+              Gérer
+            </Button>
+          }
+        >
           {parents.length ? (
             <ul className="space-y-3">
               {parents.map((link) => {
@@ -186,6 +237,30 @@ export default function StudentDetailPage() {
       </div>
 
       <CreateAccountModal student={student} open={accountOpen} onClose={() => setAccountOpen(false)} />
+
+      <EnrollmentModal
+        open={enrollment.open}
+        student={student}
+        enrollment={enrollment.record}
+        years={years.data ?? []}
+        onClose={() => setEnrollment({ open: false, record: null })}
+      />
+
+      <ParentsModal open={parentsOpen} student={student} onClose={() => setParentsOpen(false)} />
+
+      <ConfirmDialog
+        open={Boolean(removing)}
+        title="Retirer cette inscription ?"
+        confirmLabel="Retirer"
+        danger
+        onConfirm={confirmUnenroll}
+        onCancel={() => setRemoving(null)}
+      >
+        <p>
+          {student.firstName} ne sera plus inscrit(e) en {removing ? classLabel(removing.schoolClass) : ''}. Tu pourras
+          l’inscrire de nouveau ensuite.
+        </p>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={deleteStep === 'ask'}
