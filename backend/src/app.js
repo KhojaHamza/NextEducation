@@ -53,8 +53,7 @@ app.use('/api/teaching-assignments', teachingAssignmentsRoutes);
 app.use('/api/evaluations', evaluationsRoutes);
 app.use('/api/absences', absencesRoutes);
 app.use('/api/report-cards', reportCardsRoutes);
-app.use(notFound);
-app.use(errorHandler);
+
 app.use('/api/fee-items', feeItemsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/notifications', notificationsRoutes);
@@ -64,4 +63,6 @@ app.use('/api/announcements', announcementsRoutes);
 app.use('/api/push', pushRoutes);
 
 app.use('/api/timetable', timetableRoutes);
+app.use(notFound);
+app.use(errorHandler);
 export default app;

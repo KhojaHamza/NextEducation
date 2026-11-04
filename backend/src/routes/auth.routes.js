@@ -3,7 +3,7 @@ import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import * as controller from '../controllers/auth.controller.js';
 import { validate } from '../middlewares/validate.js';
-import { authenticate, authorize } from '../middlewares/auth.js';
+import { authenticate, authenticateAllowingTemporaryPassword, authorize } from '../middlewares/auth.js';
 
 const router = Router();
 
@@ -29,8 +29,8 @@ const passwordSchema = z.object({
 });
 
 router.post('/login', loginLimiter, validate(loginSchema), controller.login);
-router.get('/me', authenticate, controller.me);
-router.patch('/password', authenticate, validate(passwordSchema), controller.changePassword);
+router.get('/me', authenticateAllowingTemporaryPassword, controller.me);
+router.patch('/password', authenticateAllowingTemporaryPassword, validate(passwordSchema), controller.changePassword);
 
 // TEMPORARY route to test RBAC, we remove it later
 router.get('/admin-only', authenticate, authorize('ADMIN'), (req, res) => {
