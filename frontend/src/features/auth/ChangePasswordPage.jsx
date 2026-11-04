@@ -14,7 +14,11 @@ import { useAuth } from './useAuth.js';
 const schema = z
   .object({
     currentPassword: z.string().min(1, 'Saisis ton mot de passe actuel.'),
-    newPassword: z.string().min(8, 'Le nouveau mot de passe doit contenir au moins 8 caractères.'),
+    newPassword: z
+      .string()
+      .min(8, 'Au moins 8 caractères.')
+      .regex(/[A-Z]/, 'Au moins une lettre majuscule.')
+      .regex(/[0-9]/, 'Au moins un chiffre.'),
     confirmPassword: z.string().min(1, 'Confirme ton nouveau mot de passe.'),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
@@ -28,9 +32,8 @@ const schema = z
 
 const messageFor = (err) => {
   if (err.status === 0) return err.message;
-  if (err.status === 401) return 'Le mot de passe actuel est incorrect.';
-  // The backend explains its own rules (length, complexity...): show that explanation
-  if ([400, 409, 422].includes(err.status)) return err.message;
+  // The backend answers 400 with this exact message when the current password is wrong
+  if (err.message === 'Current password is incorrect') return 'Le mot de passe actuel est incorrect.';
   return 'Le changement a échoué. Réessaie dans un instant.';
 };
 
@@ -90,7 +93,7 @@ export default function ChangePasswordPage() {
           label="Nouveau mot de passe"
           type={inputType}
           autoComplete="new-password"
-          hint="Au moins 8 caractères."
+          hint="Au moins 8 caractères, une majuscule et un chiffre."
           error={errors.newPassword?.message}
           {...register('newPassword')}
         />
