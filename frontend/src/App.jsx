@@ -4,8 +4,11 @@ import ProtectedRoute from './app/ProtectedRoute.jsx';
 import { PASSWORD_PATH, roleHome } from './app/roleHome.js';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
+import ClassesPage from './features/classes/ClassesPage.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
+import { peopleConfig } from './features/people/config.js';
+import PeoplePage from './features/people/PeoplePage.jsx';
 import StudentDetailPage from './features/students/StudentDetailPage.jsx';
 import StudentFormPage from './features/students/StudentFormPage.jsx';
 import StudentsPage from './features/students/StudentsPage.jsx';
@@ -37,6 +40,10 @@ export default function App() {
           <Route path="/admin/eleves/nouveau" element={<StudentFormPage />} />
           <Route path="/admin/eleves/:id" element={<StudentDetailPage />} />
           <Route path="/admin/eleves/:id/modifier" element={<StudentFormPage />} />
+          <Route path="/admin/classes" element={<ClassesPage />} />
+          {/* The key makes React start fresh (search, page) when switching between the two */}
+          <Route path="/admin/enseignants" element={<PeoplePage key="teachers" config={peopleConfig.teachers} />} />
+          <Route path="/admin/parents" element={<PeoplePage key="parents" config={peopleConfig.parents} />} />
         </Route>
       </Route>
 

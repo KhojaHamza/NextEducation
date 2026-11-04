@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Plus, SearchX } from 'lucide-react';
+import { Download, GraduationCap, Plus, SearchX, Upload } from 'lucide-react';
+import { api } from '../../api/client.js';
+import { saveFile } from '../../api/download.js';
 import { usePagedList } from '../../api/queries.js';
 import Badge from '../../components/ui/Badge.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -10,7 +12,10 @@ import PageHeader from '../../components/ui/PageHeader.jsx';
 import Pagination from '../../components/ui/Pagination.jsx';
 import SearchInput from '../../components/ui/SearchInput.jsx';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
+import { useToast } from '../../hooks/useToast.js';
+import { messageFor } from './errors.js';
 import { classLabel, formatDate, genderLabel } from './format.js';
+import ImportStudentsModal from './ImportStudentsModal.jsx';
 
 const PAGE_SIZE = 20;
 
@@ -42,8 +47,11 @@ const columns = [
 
 export default function StudentsPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [importOpen, setImportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const debouncedSearch = useDebouncedValue(search.trim());
 
   const list = usePagedList('students', { page, limit: PAGE_SIZE, search: debouncedSearch });
@@ -54,6 +62,17 @@ export default function StudentsPage() {
   };
 
   const goToNew = () => navigate('/admin/eleves/nouveau');
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      saveFile(await api('/students/export', { asBlob: true }), 'eleves.csv');
+    } catch (err) {
+      toast.error(messageFor(err));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const empty = debouncedSearch ? (
     <EmptyState icon={SearchX} title="Aucun élève trouvé">
@@ -75,10 +94,20 @@ export default function StudentsPage() {
         title="Élèves"
         description="Tous les élèves de l’école."
         actions={
-          <Button onClick={goToNew}>
-            <Plus className="size-4" aria-hidden="true" />
-            Nouvel élève
-          </Button>
+          <>
+            <Button variant="secondary" onClick={exportCsv} loading={exporting}>
+              <Download className="size-4" aria-hidden="true" />
+              Exporter
+            </Button>
+            <Button variant="secondary" onClick={() => setImportOpen(true)}>
+              <Upload className="size-4" aria-hidden="true" />
+              Importer
+            </Button>
+            <Button onClick={goToNew}>
+              <Plus className="size-4" aria-hidden="true" />
+              Nouvel élève
+            </Button>
+          </>
         }
       />
 
@@ -101,6 +130,8 @@ export default function StudentsPage() {
       </div>
 
       <Pagination meta={list.data?.meta} onPageChange={setPage} />
+
+      <ImportStudentsModal open={importOpen} onClose={() => setImportOpen(false)} />
     </>
   );
 }
