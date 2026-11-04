@@ -6,6 +6,8 @@ import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
+import StudentDetailPage from './features/students/StudentDetailPage.jsx';
+import StudentFormPage from './features/students/StudentFormPage.jsx';
 import StudentsPage from './features/students/StudentsPage.jsx';
 import AppShell from './layouts/AppShell.jsx';
 
@@ -32,6 +34,9 @@ export default function App() {
       <Route element={<ProtectedRoute roles={['ADMIN']} />}>
         <Route element={<AppShell />}>
           <Route path="/admin/eleves" element={<StudentsPage />} />
+          <Route path="/admin/eleves/nouveau" element={<StudentFormPage />} />
+          <Route path="/admin/eleves/:id" element={<StudentDetailPage />} />
+          <Route path="/admin/eleves/:id/modifier" element={<StudentFormPage />} />
         </Route>
       </Route>
 
