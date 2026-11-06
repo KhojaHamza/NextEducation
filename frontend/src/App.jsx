@@ -8,8 +8,10 @@ import LoginPage from './features/auth/LoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
+import TeacherHome from './features/dashboard/TeacherHome.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
 import EvaluationsPage from './features/evaluations/EvaluationsPage.jsx';
+import GradeEntryPage from './features/evaluations/GradeEntryPage.jsx';
 import { peopleConfig } from './features/people/config.js';
 import PeoplePage from './features/people/PeoplePage.jsx';
 import SchoolYearsPage from './features/schoolYears/SchoolYearsPage.jsx';
@@ -18,6 +20,9 @@ import StudentFormPage from './features/students/StudentFormPage.jsx';
 import StudentsPage from './features/students/StudentsPage.jsx';
 import SubjectsPage from './features/subjects/SubjectsPage.jsx';
 import AppShell from './layouts/AppShell.jsx';
+
+// Roles that already have a real home page; the others keep the placeholder for now
+const homes = { ADMIN: <AdminDashboard />, TEACHER: <TeacherHome /> };
 
 export default function App() {
   return (
@@ -29,11 +34,11 @@ export default function App() {
         <Route path={PASSWORD_PATH} element={<ChangePasswordPage />} />
       </Route>
 
-      {/* Home page of each role (only the administrator has a real dashboard for now) */}
+      {/* Home page of each role */}
       {Object.entries(roleHome).map(([role, path]) => (
         <Route key={role} element={<ProtectedRoute roles={[role]} />}>
           <Route element={<AppShell />}>
-            <Route path={path} element={role === 'ADMIN' ? <AdminDashboard /> : <DashboardPlaceholder />} />
+            <Route path={path} element={homes[role] ?? <DashboardPlaceholder />} />
           </Route>
         </Route>
       ))}
@@ -52,7 +57,16 @@ export default function App() {
           <Route path="/admin/matieres" element={<SubjectsPage />} />
           <Route path="/admin/attributions" element={<AssignmentsPage />} />
           <Route path="/admin/evaluations" element={<EvaluationsPage />} />
+          <Route path="/admin/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/admin/annees" element={<SchoolYearsPage />} />
+        </Route>
+      </Route>
+
+      {/* Teacher pages */}
+      <Route element={<ProtectedRoute roles={['TEACHER']} />}>
+        <Route element={<AppShell />}>
+          <Route path="/enseignant/evaluations" element={<EvaluationsPage />} />
+          <Route path="/enseignant/evaluations/:id/notes" element={<GradeEntryPage />} />
         </Route>
       </Route>
 

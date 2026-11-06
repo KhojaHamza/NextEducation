@@ -24,7 +24,10 @@ const adminPages = [
   { to: '/admin/annees', label: 'Années scolaires', icon: CalendarDays },
 ];
 
+const teacherPages = [{ to: '/enseignant/evaluations', label: 'Évaluations', icon: ClipboardList }];
+
 export const navigationFor = (role) => [
   { to: roleHome[role], label: 'Accueil', icon: House },
   ...(role === 'ADMIN' ? adminPages : []),
+  ...(role === 'TEACHER' ? teacherPages : []),
 ];

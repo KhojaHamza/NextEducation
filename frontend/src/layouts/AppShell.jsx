@@ -44,7 +44,7 @@ export default function AppShell() {
 
         <nav aria-label="Navigation principale" className="flex flex-1 flex-col gap-1 overflow-y-auto">
           {items.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} end className={sideLink}>
+            <NavLink key={to} to={to} end={to.split('/').length <= 2} className={sideLink}>
               <Icon className="size-5" aria-hidden="true" />
               {label}
             </NavLink>
@@ -98,7 +98,7 @@ export default function AppShell() {
         className="fixed inset-x-0 bottom-0 z-40 flex gap-1 overflow-x-auto border-t border-ink/10 bg-paper px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
       >
         {items.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} end className={tabLink}>
+          <NavLink key={to} to={to} end={to.split('/').length <= 2} className={tabLink}>
             <Icon className="size-6" aria-hidden="true" />
             {label}
           </NavLink>
