@@ -14,8 +14,10 @@ import {
   MessageCircle,
   Presentation,
   School,
+  ScrollText,
   Trophy,
   UserCheck,
+  UserCog,
   UserX,
   Users,
   Wallet,
@@ -41,6 +43,8 @@ const adminPages = [
   { to: '/admin/impayes', label: 'Impayés', icon: CircleAlert },
   { to: '/admin/frais', label: 'Frais scolaires', icon: Wallet },
   { to: '/admin/annees', label: 'Années scolaires', icon: CalendarDays },
+  { to: '/admin/utilisateurs', label: 'Utilisateurs', icon: UserCog },
+  { to: '/admin/journal', label: 'Journal d’audit', icon: ScrollText },
 ];
 
 const teacherPages = [
