@@ -30,6 +30,43 @@ router.get('/', authorize('ADMIN', 'ACCOUNTANT', 'TEACHER'), asyncHandler(async 
   res.json({ status: 'success', data: items });
 }));
 
+// Classes of the logged-in teacher, with the subjects they may grade (feeds the teacher screens)
+router.get('/mine', authorize('TEACHER'), asyncHandler(async (req, res) => {
+  const teacher = await prisma.teacher.findFirst({ where: { userId: req.user.id, deletedAt: null } });
+  if (!teacher) return res.json({ status: 'success', data: [] });
+
+  const classes = await prisma.schoolClass.findMany({
+    where: {
+      deletedAt: null,
+      OR: [
+        { homeroomTeacherId: teacher.id },
+        { assignments: { some: { teacherId: teacher.id, deletedAt: null } } },
+      ],
+    },
+    include: {
+      schoolYear: { select: { id: true, label: true, isCurrent: true } },
+      assignments: { where: { teacherId: teacher.id, deletedAt: null }, include: { subject: true } },
+    },
+    orderBy: [{ level: 'asc' }, { section: 'asc' }],
+  });
+
+  // The homeroom teacher may grade every subject of the level (same rule as assertCanTeach)
+  const levels = [...new Set(classes.filter((c) => c.homeroomTeacherId === teacher.id).map((c) => c.level))];
+  const levelSubjects = levels.length
+    ? await prisma.subject.findMany({ where: { level: { in: levels }, deletedAt: null }, orderBy: { name: 'asc' } })
+    : [];
+
+  const data = classes.map((c) => {
+    const homeroom = c.homeroomTeacherId === teacher.id;
+    const subjects = homeroom ? levelSubjects.filter((s) => s.level === c.level) : c.assignments.map((a) => a.subject);
+    return {
+      id: c.id, level: c.level, section: c.section, capacity: c.capacity,
+      schoolYearId: c.schoolYearId, schoolYear: c.schoolYear, homeroom,
+      subjects: subjects.map((s) => ({ id: s.id, name: s.name, coefficient: Number(s.coefficient) })),
+    };
+  });
+  res.json({ status: 'success', data });
+}));
 router.post('/', authorize('ADMIN'), validate(schema), asyncHandler(async (req, res) => {
   const { teacherId, subjectId, classId } = req.body;
   const record = await prisma.$transaction(async (tx) => {
