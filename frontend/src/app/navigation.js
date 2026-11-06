@@ -25,7 +25,6 @@ import {
 import { roleHome } from './roleHome.js';
 
 // Only pages that already exist are listed here.
-// Each new feature adds its own line for the roles that use it.
 const adminPages = [
   { to: '/admin/eleves', label: 'Élèves', icon: GraduationCap },
   { to: '/admin/classes', label: 'Classes', icon: School },
@@ -62,13 +61,18 @@ const parentPages = [
   { to: '/parent/paiements', label: 'Paiements', icon: CreditCard },
 ];
 
+const studentPages = [
+  { to: '/eleve/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
+  { to: '/eleve/absences', label: 'Absences', icon: UserX },
+  { to: '/eleve/bulletins', label: 'Bulletins', icon: FileText },
+];
+
 const accountantPages = [
   { to: '/comptabilite/paiements', label: 'Paiements', icon: CreditCard },
   { to: '/comptabilite/impayes', label: 'Impayés', icon: CircleAlert },
   { to: '/comptabilite/frais', label: 'Frais scolaires', icon: Wallet },
 ];
 
-// All authenticated roles can use these
 const sharedPages = [
   { to: '/messages', label: 'Messages', icon: MessageCircle },
   { to: '/annonces', label: 'Annonces', icon: Megaphone },
@@ -79,6 +83,7 @@ export const navigationFor = (role) => [
   ...(role === 'ADMIN' ? adminPages : []),
   ...(role === 'TEACHER' ? teacherPages : []),
   ...(role === 'PARENT' ? parentPages : []),
+  ...(role === 'STUDENT' ? studentPages : []),
   ...(role === 'ACCOUNTANT' ? accountantPages : []),
   ...sharedPages,
 ];
