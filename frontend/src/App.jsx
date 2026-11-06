@@ -5,17 +5,22 @@ import { PASSWORD_PATH, roleHome } from './app/roleHome.js';
 import AbsencesPage from './features/absences/AbsencesPage.jsx';
 import ParentAbsencesPage from './features/absences/ParentAbsencesPage.jsx';
 import RollCallPage from './features/absences/RollCallPage.jsx';
+import AnnouncementsPage from './features/announcements/AnnouncementsPage.jsx';
 import AssignmentsPage from './features/assignments/AssignmentsPage.jsx';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
+import ParentHome from './features/dashboard/ParentHome.jsx';
 import TeacherHome from './features/dashboard/TeacherHome.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
 import EvaluationsPage from './features/evaluations/EvaluationsPage.jsx';
 import GradeEntryPage from './features/evaluations/GradeEntryPage.jsx';
 import FeesPage from './features/fees/FeesPage.jsx';
+import MessagesPage from './features/messages/MessagesPage.jsx';
+import ThreadPage from './features/messages/ThreadPage.jsx';
+import NotificationsPage from './features/notifications/NotificationsPage.jsx';
 import OverduePage from './features/payments/OverduePage.jsx';
 import ParentPaymentsPage from './features/payments/ParentPaymentsPage.jsx';
 import PaymentsPage from './features/payments/PaymentsPage.jsx';
@@ -34,10 +39,9 @@ import MyTimetablePage from './features/timetable/MyTimetablePage.jsx';
 import ParentTimetablePage from './features/timetable/ParentTimetablePage.jsx';
 import TimetablePage from './features/timetable/TimetablePage.jsx';
 import AppShell from './layouts/AppShell.jsx';
-import AccountantHome from './features/dashboard/AccountantHome.jsx';
 
 // Roles that already have a real home page; the others keep the placeholder for now
-const homes = { ADMIN: <AdminDashboard />, TEACHER: <TeacherHome />, ACCOUNTANT: <AccountantHome /> };
+const homes = { ADMIN: <AdminDashboard />, TEACHER: <TeacherHome />, PARENT: <ParentHome /> };
 
 export default function App() {
   return (
@@ -58,6 +62,16 @@ export default function App() {
         </Route>
       ))}
 
+      {/* Shared pages: messages, announcements, notifications (all authenticated roles) */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />}>
+          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/messages/:threadId" element={<ThreadPage />} />
+          <Route path="/annonces" element={<AnnouncementsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+        </Route>
+      </Route>
+
       {/* Administration pages */}
       <Route element={<ProtectedRoute roles={['ADMIN']} />}>
         <Route element={<AppShell />}>
@@ -66,7 +80,6 @@ export default function App() {
           <Route path="/admin/eleves/:id" element={<StudentDetailPage />} />
           <Route path="/admin/eleves/:id/modifier" element={<StudentFormPage />} />
           <Route path="/admin/classes" element={<ClassesPage />} />
-          {/* The key makes React start fresh (search, page) when switching between the two */}
           <Route path="/admin/enseignants" element={<PeoplePage key="teachers" config={peopleConfig.teachers} />} />
           <Route path="/admin/parents" element={<PeoplePage key="parents" config={peopleConfig.parents} />} />
           <Route path="/admin/matieres" element={<SubjectsPage />} />

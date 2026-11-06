@@ -10,6 +10,8 @@ import {
   FileText,
   GraduationCap,
   House,
+  Megaphone,
+  MessageCircle,
   Presentation,
   School,
   Trophy,
@@ -62,10 +64,17 @@ const accountantPages = [
   { to: '/comptabilite/frais', label: 'Frais scolaires', icon: Wallet },
 ];
 
+// All authenticated roles can use these
+const sharedPages = [
+  { to: '/messages', label: 'Messages', icon: MessageCircle },
+  { to: '/annonces', label: 'Annonces', icon: Megaphone },
+];
+
 export const navigationFor = (role) => [
   { to: roleHome[role], label: 'Accueil', icon: House },
   ...(role === 'ADMIN' ? adminPages : []),
   ...(role === 'TEACHER' ? teacherPages : []),
   ...(role === 'PARENT' ? parentPages : []),
   ...(role === 'ACCOUNTANT' ? accountantPages : []),
+  ...sharedPages,
 ];
