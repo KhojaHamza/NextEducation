@@ -3,6 +3,7 @@ import HomeRedirect from './app/HomeRedirect.jsx';
 import ProtectedRoute from './app/ProtectedRoute.jsx';
 import { PASSWORD_PATH, roleHome } from './app/roleHome.js';
 import AbsencesPage from './features/absences/AbsencesPage.jsx';
+import StudentAbsencesPage from './features/absences/StudentAbsencesPage.jsx';
 import ParentAbsencesPage from './features/absences/ParentAbsencesPage.jsx';
 import RollCallPage from './features/absences/RollCallPage.jsx';
 import AnnouncementsPage from './features/announcements/AnnouncementsPage.jsx';
@@ -12,8 +13,10 @@ import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
+import AccountantHome from './features/dashboard/AccountantHome.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
 import ParentHome from './features/dashboard/ParentHome.jsx';
+import StudentHome from './features/dashboard/StudentHome.jsx';
 import TeacherHome from './features/dashboard/TeacherHome.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
 import EvaluationsPage from './features/evaluations/EvaluationsPage.jsx';
@@ -28,6 +31,7 @@ import PaymentsPage from './features/payments/PaymentsPage.jsx';
 import { peopleConfig } from './features/people/config.js';
 import PeoplePage from './features/people/PeoplePage.jsx';
 import ParentReportCardsPage from './features/reportCards/ParentReportCardsPage.jsx';
+import StudentReportCardsPage from './features/reportCards/StudentReportCardsPage.jsx';
 import ReportCardPage from './features/reportCards/ReportCardPage.jsx';
 import ResultsPage from './features/reportCards/ResultsPage.jsx';
 import RoomsPage from './features/rooms/RoomsPage.jsx';
@@ -38,11 +42,18 @@ import StudentsPage from './features/students/StudentsPage.jsx';
 import SubjectsPage from './features/subjects/SubjectsPage.jsx';
 import MyTimetablePage from './features/timetable/MyTimetablePage.jsx';
 import ParentTimetablePage from './features/timetable/ParentTimetablePage.jsx';
+import StudentTimetablePage from './features/timetable/StudentTimetablePage.jsx';
 import TimetablePage from './features/timetable/TimetablePage.jsx';
 import UsersPage from './features/users/UsersPage.jsx';
 import AppShell from './layouts/AppShell.jsx';
 
-const homes = { ADMIN: <AdminDashboard />, TEACHER: <TeacherHome />, PARENT: <ParentHome /> };
+const homes = { 
+  ADMIN: <AdminDashboard />, 
+  TEACHER: <TeacherHome />, 
+  PARENT: <ParentHome />, 
+  STUDENT: <StudentHome />,
+  ACCOUNTANT: <AccountantHome />
+};
 
 export default function App() {
   return (
@@ -118,6 +129,15 @@ export default function App() {
           <Route path="/parent/bulletins" element={<ParentReportCardsPage />} />
           <Route path="/parent/bulletins/:studentId" element={<ReportCardPage />} />
           <Route path="/parent/paiements" element={<ParentPaymentsPage />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute roles={['STUDENT']} />}>
+        <Route element={<AppShell />}>
+          <Route path="/eleve/emploi-du-temps" element={<StudentTimetablePage />} />
+          <Route path="/eleve/absences" element={<StudentAbsencesPage />} />
+          <Route path="/eleve/bulletins" element={<StudentReportCardsPage />} />
+          <Route path="/eleve/bulletins/:studentId" element={<ReportCardPage />} />
         </Route>
       </Route>
 

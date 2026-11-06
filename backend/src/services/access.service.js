@@ -64,9 +64,18 @@ export const assertParentOfStudent = async (userId, studentId) => {
   if (!link) throw forbidden();
 };
 
+// A student account only sees its own record (Student.userId)
+export const assertIsStudentUser = async (userId, studentId) => {
+  const own = await prisma.student.findFirst({
+    where: { id: studentId, userId, deletedAt: null },
+  });
+  if (!own) throw forbidden();
+};
 export const assertCanViewStudent = async (user, studentId) => {
   if (user.role === 'ADMIN') return;
   if (user.role === 'PARENT') return assertParentOfStudent(user.id, studentId);
+  if (user.role === 'STUDENT') return assertIsStudentUser(user.id, studentId);
+  if (user.role === 'STUDENT') return assertIsStudentUser(user.id, studentId);
   if (user.role === 'TEACHER') {
     const ids = await getTeacherClassIds(user.id);
     const enrollment = await prisma.enrollment.findFirst({

@@ -43,14 +43,14 @@ router.get('/class/:classId', authorize('ADMIN', 'TEACHER'), asyncHandler(async 
   });
 }));
 
-router.get('/:studentId', authorize('ADMIN', 'TEACHER', 'PARENT'), asyncHandler(async (req, res) => {
+router.get('/:studentId', authorize('ADMIN', 'TEACHER', 'PARENT', 'STUDENT'), asyncHandler(async (req, res) => {
   const studentId = Number(req.params.studentId);
   await assertCanViewStudent(req.user, studentId);
   const { term, schoolYearId } = parseQuery(req);
   res.json({ status: 'success', data: await buildReportCard(studentId, term, schoolYearId) });
 }));
 
-router.get('/:studentId/pdf', authorize('ADMIN', 'TEACHER', 'PARENT'), asyncHandler(async (req, res) => {
+router.get('/:studentId/pdf', authorize('ADMIN', 'TEACHER', 'PARENT', 'STUDENT'), asyncHandler(async (req, res) => {
   const studentId = Number(req.params.studentId);
   await assertCanViewStudent(req.user, studentId);
   const { term, schoolYearId } = parseQuery(req);
