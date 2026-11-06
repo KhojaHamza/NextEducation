@@ -15,6 +15,10 @@ import TeacherHome from './features/dashboard/TeacherHome.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
 import EvaluationsPage from './features/evaluations/EvaluationsPage.jsx';
 import GradeEntryPage from './features/evaluations/GradeEntryPage.jsx';
+import FeesPage from './features/fees/FeesPage.jsx';
+import OverduePage from './features/payments/OverduePage.jsx';
+import ParentPaymentsPage from './features/payments/ParentPaymentsPage.jsx';
+import PaymentsPage from './features/payments/PaymentsPage.jsx';
 import { peopleConfig } from './features/people/config.js';
 import PeoplePage from './features/people/PeoplePage.jsx';
 import ParentReportCardsPage from './features/reportCards/ParentReportCardsPage.jsx';
@@ -74,6 +78,9 @@ export default function App() {
           <Route path="/admin/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/admin/resultats" element={<ResultsPage />} />
           <Route path="/admin/bulletins/:studentId" element={<ReportCardPage />} />
+          <Route path="/admin/paiements" element={<PaymentsPage />} />
+          <Route path="/admin/impayes" element={<OverduePage />} />
+          <Route path="/admin/frais" element={<FeesPage />} />
           <Route path="/admin/annees" element={<SchoolYearsPage />} />
         </Route>
       </Route>
@@ -98,6 +105,16 @@ export default function App() {
           <Route path="/parent/absences" element={<ParentAbsencesPage />} />
           <Route path="/parent/bulletins" element={<ParentReportCardsPage />} />
           <Route path="/parent/bulletins/:studentId" element={<ReportCardPage />} />
+          <Route path="/parent/paiements" element={<ParentPaymentsPage />} />
+        </Route>
+      </Route>
+
+      {/* Accountant pages */}
+      <Route element={<ProtectedRoute roles={['ACCOUNTANT']} />}>
+        <Route element={<AppShell />}>
+          <Route path="/comptabilite/paiements" element={<PaymentsPage />} />
+          <Route path="/comptabilite/impayes" element={<OverduePage />} />
+          <Route path="/comptabilite/frais" element={<FeesPage />} />
         </Route>
       </Route>
 
