@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,4 +5,556 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  PARENT
+  STUDENT
+  ACCOUNTANT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+model SchoolYear {
+  id        Int       @id @default(autoincrement())
+  label     String    @unique
+  startDate DateTime
+  endDate   DateTime
+  isCurrent Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  classes     SchoolClass[]
+  enrollments Enrollment[]
+  students    Student[]
+  absences    Absence[]
+  feeItems    FeeItem[]
+  payments    Payment[]
+
+  @@map("school_years")
+}
+
+model User {
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique
+  passwordHash       String
+  role               Role
+  firstName          String
+  lastName           String
+  phone              String?
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  teacher   Teacher?
+  parent    Parent?
+  student   Student?
+  auditLogs AuditLog[]
+
+  absencesRecorded      Absence[]
+  notifications         Notification[]
+  paymentsRecorded      Payment[]          @relation("PaymentRecordedBy")
+  paymentsCancelled     Payment[]          @relation("PaymentCancelledBy")
+  messagesSent          Message[]          @relation("MessageSender")
+  messagesReceived      MessageRecipient[]
+  messageAccessLogs     MessageAccessLog[]
+  announcementsAuthored Announcement[]     @relation("AnnouncementAuthor")
+  pushSubscriptions     PushSubscription[]
+
+  @@map("users")
+}
+
+model Teacher {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @unique
+  user       User      @relation(fields: [userId], references: [id])
+  speciality String?
+  hiredAt    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  homeroomClasses SchoolClass[]
+  assignments     TeachingAssignment[]
+  timetableSlots  TimetableSlot[]
+
+  @@map("teachers")
+}
+
+model Parent {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique
+  user      User      @relation(fields: [userId], references: [id])
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  children StudentParent[]
+
+  @@map("parents")
+}
+
+model Student {
+  id           Int        @id @default(autoincrement())
+  userId       Int?       @unique
+  user         User?      @relation(fields: [userId], references: [id])
+  matricule    String     @unique
+  firstName    String
+  lastName     String
+  birthDate    DateTime
+  gender       Gender
+  photoUrl     String?
+  medicalNotes String?
+  entryYearId  Int        @map("annee_scolaire_entree_id")
+  entryYear    SchoolYear @relation(fields: [entryYearId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  parents     StudentParent[]
+  enrollments Enrollment[]
+  grades      Grade[]
+  absences    Absence[]
+  payments    Payment[]
+  messages    Message[]
+
+  @@map("students")
+}
+
+model StudentParent {
+  studentId    Int
+  parentId     Int
+  relationship String
+  student      Student @relation(fields: [studentId], references: [id])
+  parent       Parent  @relation(fields: [parentId], references: [id])
+
+  @@id([studentId, parentId])
+  @@map("student_parents")
+}
+
+model SchoolClass {
+  id                Int        @id @default(autoincrement())
+  level             String
+  section           String
+  capacity          Int
+  schoolYearId      Int        @map("annee_scolaire_id")
+  schoolYear        SchoolYear @relation(fields: [schoolYearId], references: [id])
+  homeroomTeacherId Int?
+  homeroomTeacher   Teacher?   @relation(fields: [homeroomTeacherId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  enrollments    Enrollment[]
+  assignments    TeachingAssignment[]
+  evaluations    Evaluation[]
+  absences       Absence[]
+  timetableSlots TimetableSlot[]
+
+  @@unique([level, section, schoolYearId])
+  @@map("classes")
+}
+
+model Enrollment {
+  id           Int         @id @default(autoincrement())
+  studentId    Int
+  classId      Int
+  schoolYearId Int         @map("annee_scolaire_id")
+  student      Student     @relation(fields: [studentId], references: [id])
+  schoolClass  SchoolClass @relation(fields: [classId], references: [id])
+  schoolYear   SchoolYear  @relation(fields: [schoolYearId], references: [id])
+  enrolledAt   DateTime    @default(now())
+  deletedAt    DateTime?
+
+  @@unique([studentId, schoolYearId])
+  @@map("enrollments")
+}
+
+model Subject {
+  id          Int       @id @default(autoincrement())
+  name        String
+  coefficient Decimal   @db.Decimal(4, 2)
+  level       String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  assignments    TeachingAssignment[]
+  evaluations    Evaluation[]
+  timetableSlots TimetableSlot[]
+
+  @@unique([name, level])
+  @@map("subjects")
+}
+
+model Room {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  capacity    Int
+  isAvailable Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  timetableSlots TimetableSlot[]
+
+  @@map("rooms")
+}
+
+model TeachingAssignment {
+  id          Int         @id @default(autoincrement())
+  teacherId   Int
+  subjectId   Int
+  classId     Int
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  deletedAt   DateTime?
+
+  @@unique([teacherId, subjectId, classId])
+  @@map("teaching_assignments")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  Int?
+  oldValues Json?
+  newValues Json?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+enum Term {
+  T1
+  T2
+  T3
+}
+
+enum EvaluationType {
+  CONTINUOUS
+  EXAM
+}
+
+enum AbsencePeriod {
+  MORNING
+  AFTERNOON
+}
+
+enum JustificationStatus {
+  NONE
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Evaluation {
+  id        Int            @id @default(autoincrement())
+  title     String
+  type      EvaluationType
+  term      Term
+  date      DateTime       @db.Date
+  maxScore  Decimal        @default(20) @db.Decimal(5, 2)
+  weight    Decimal        @default(1) @db.Decimal(4, 2)
+  classId   Int
+  subjectId Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  deletedAt DateTime?
+
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  grades      Grade[]
+
+  @@index([classId, subjectId, term])
+  @@map("evaluations")
+}
+
+model Grade {
+  id           Int       @id @default(autoincrement())
+  evaluationId Int
+  studentId    Int
+  score        Decimal   @db.Decimal(5, 2)
+  comment      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  student    Student    @relation(fields: [studentId], references: [id])
+
+  @@unique([evaluationId, studentId])
+  @@map("grades")
+}
+
+model Absence {
+  id                  Int                 @id @default(autoincrement())
+  studentId           Int
+  classId             Int
+  schoolYearId        Int                 @map("annee_scolaire_id")
+  date                DateTime            @db.Date
+  period              AbsencePeriod
+  justificationStatus JustificationStatus @default(NONE)
+  justificationReason String?
+  reviewNote          String?
+  reviewedAt          DateTime?
+  recordedById        Int?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  deletedAt           DateTime?
+
+  student     Student     @relation(fields: [studentId], references: [id])
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  schoolYear  SchoolYear  @relation(fields: [schoolYearId], references: [id])
+  recordedBy  User?       @relation(fields: [recordedById], references: [id])
+
+  @@unique([studentId, date, period])
+  @@index([classId, date])
+  @@map("absences")
+}
+
+enum FeeType {
+  REGISTRATION
+  TUITION
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model FeeItem {
+  id           Int       @id @default(autoincrement())
+  schoolYearId Int       @map("annee_scolaire_id")
+  name         String
+  type         FeeType
+  level        String? // null = applies to every level
+  amount       Decimal   @db.Decimal(10, 3)
+  dueDate      DateTime  @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id])
+
+  @@index([schoolYearId])
+  @@map("fee_items")
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  receiptNumber String        @unique
+  studentId     Int
+  schoolYearId  Int           @map("annee_scolaire_id")
+  amount        Decimal       @db.Decimal(10, 3)
+  method        PaymentMethod
+  reference     String?
+  note          String?
+  paidAt        DateTime      @db.Date
+  recordedById  Int?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  cancelledById Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  student     Student    @relation(fields: [studentId], references: [id])
+  schoolYear  SchoolYear @relation(fields: [schoolYearId], references: [id])
+  recordedBy  User?      @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  cancelledBy User?      @relation("PaymentCancelledBy", fields: [cancelledById], references: [id])
+
+  @@index([studentId, schoolYearId])
+  @@map("payments")
+}
+
+model Notification {
+  id        Int                 @id @default(autoincrement())
+  userId    Int
+  type      String // PAYMENT_RECEIVED, PAYMENT_REMINDER, PAYMENT_CANCELLED...
+  channel   NotificationChannel
+  title     String
+  body      String
+  data      Json?
+  status    NotificationStatus
+  error     String?
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@map("notifications")
+}
+
+enum MessageStatus {
+  DRAFT
+  SENT
+}
+
+enum MessageAccessAction {
+  VIEW_THREAD
+  DOWNLOAD_ATTACHMENT
+}
+
+model Message {
+  id        Int           @id @default(autoincrement())
+  threadId  Int? // root message of the conversation; null for the root itself
+  senderId  Int
+  studentId Int? // the child the conversation is about
+  subject   String        @default("")
+  body      String        @default("")
+  important Boolean       @default(false)
+  status    MessageStatus @default(DRAFT)
+  sentAt    DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  sender      User                @relation("MessageSender", fields: [senderId], references: [id])
+  student     Student?            @relation(fields: [studentId], references: [id])
+  thread      Message?            @relation("MessageThread", fields: [threadId], references: [id])
+  replies     Message[]           @relation("MessageThread")
+  recipients  MessageRecipient[]
+  attachments MessageAttachment[]
+
+  @@index([threadId])
+  @@index([senderId, status])
+  @@map("messages")
+}
+
+model MessageRecipient {
+  messageId Int
+  userId    Int
+  readAt    DateTime?
+  hiddenAt  DateTime? // recipient-side deletion: hides the message from this user's inbox only
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId])
+  @@index([userId, hiddenAt])
+  @@map("message_recipients")
+}
+
+model MessageAttachment {
+  id         Int      @id @default(autoincrement())
+  messageId  Int
+  fileName   String // original name, display only
+  mimeType   String
+  size       Int
+  storageKey String   @unique // random name on disk, never the original name
+  createdAt  DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_attachments")
+}
+
+model MessageAccessLog {
+  id           Int                 @id @default(autoincrement())
+  userId       Int
+  threadId     Int
+  messageId    Int?
+  attachmentId Int?
+  action       MessageAccessAction
+  createdAt    DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([threadId, createdAt])
+  @@index([userId, createdAt])
+  @@map("message_access_logs")
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  title       String
+  body        String
+  audience    Role[]
+  correctsId  Int? // set when this announcement corrects an earlier one
+  authorId    Int
+  publishedAt DateTime @default(now())
+
+  author      User           @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  corrects    Announcement?  @relation("AnnouncementCorrection", fields: [correctsId], references: [id])
+  corrections Announcement[] @relation("AnnouncementCorrection")
+
+  @@index([publishedAt])
+  @@map("announcements")
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model TimetableSlot {
+  id          Int       @id @default(autoincrement())
+  classId     Int
+  subjectId   Int
+  teacherId   Int
+  roomId      Int?
+  dayOfWeek   DayOfWeek
+  startMinute Int // minutes since midnight: 8h30 = 510
+  endMinute   Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  room        Room?       @relation(fields: [roomId], references: [id])
+
+  @@index([classId, dayOfWeek])
+  @@index([teacherId, dayOfWeek])
+  @@index([roomId, dayOfWeek])
+  @@map("timetable_slots")
 }
