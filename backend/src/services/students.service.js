@@ -102,6 +102,10 @@ export const listStudents = async (query, classScope = null) => {
   if (query.unassigned === 'true') where.enrollments = { none: { deletedAt: null } };
   else if (query.classId || query.schoolYearId) where.enrollments = { some: link };
 
+  // A teacher only sees the students of their own classes
+  if (classScope) {
+    where.AND = [{ enrollments: { some: { classId: { in: classScope }, deletedAt: null } } }];
+  }
   const [items, total] = await Promise.all([
     prisma.student.findMany({
       where, include: studentInclude,
