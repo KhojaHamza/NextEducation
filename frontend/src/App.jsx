@@ -17,11 +17,15 @@ import PeoplePage from './features/people/PeoplePage.jsx';
 import ParentReportCardsPage from './features/reportCards/ParentReportCardsPage.jsx';
 import ReportCardPage from './features/reportCards/ReportCardPage.jsx';
 import ResultsPage from './features/reportCards/ResultsPage.jsx';
+import RoomsPage from './features/rooms/RoomsPage.jsx';
 import SchoolYearsPage from './features/schoolYears/SchoolYearsPage.jsx';
 import StudentDetailPage from './features/students/StudentDetailPage.jsx';
 import StudentFormPage from './features/students/StudentFormPage.jsx';
 import StudentsPage from './features/students/StudentsPage.jsx';
 import SubjectsPage from './features/subjects/SubjectsPage.jsx';
+import MyTimetablePage from './features/timetable/MyTimetablePage.jsx';
+import ParentTimetablePage from './features/timetable/ParentTimetablePage.jsx';
+import TimetablePage from './features/timetable/TimetablePage.jsx';
 import AppShell from './layouts/AppShell.jsx';
 
 // Roles that already have a real home page; the others keep the placeholder for now
@@ -59,6 +63,8 @@ export default function App() {
           <Route path="/admin/parents" element={<PeoplePage key="parents" config={peopleConfig.parents} />} />
           <Route path="/admin/matieres" element={<SubjectsPage />} />
           <Route path="/admin/attributions" element={<AssignmentsPage />} />
+          <Route path="/admin/salles" element={<RoomsPage />} />
+          <Route path="/admin/emploi-du-temps" element={<TimetablePage />} />
           <Route path="/admin/evaluations" element={<EvaluationsPage />} />
           <Route path="/admin/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/admin/resultats" element={<ResultsPage />} />
@@ -70,6 +76,7 @@ export default function App() {
       {/* Teacher pages */}
       <Route element={<ProtectedRoute roles={['TEACHER']} />}>
         <Route element={<AppShell />}>
+          <Route path="/enseignant/emploi-du-temps" element={<MyTimetablePage />} />
           <Route path="/enseignant/evaluations" element={<EvaluationsPage />} />
           <Route path="/enseignant/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/enseignant/resultats" element={<ResultsPage />} />
@@ -80,6 +87,7 @@ export default function App() {
       {/* Parent pages */}
       <Route element={<ProtectedRoute roles={['PARENT']} />}>
         <Route element={<AppShell />}>
+          <Route path="/parent/emploi-du-temps" element={<ParentTimetablePage />} />
           <Route path="/parent/bulletins" element={<ParentReportCardsPage />} />
           <Route path="/parent/bulletins/:studentId" element={<ReportCardPage />} />
         </Route>
