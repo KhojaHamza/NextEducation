@@ -2,6 +2,9 @@ import { Route, Routes } from 'react-router-dom';
 import HomeRedirect from './app/HomeRedirect.jsx';
 import ProtectedRoute from './app/ProtectedRoute.jsx';
 import { PASSWORD_PATH, roleHome } from './app/roleHome.js';
+import AbsencesPage from './features/absences/AbsencesPage.jsx';
+import ParentAbsencesPage from './features/absences/ParentAbsencesPage.jsx';
+import RollCallPage from './features/absences/RollCallPage.jsx';
 import AssignmentsPage from './features/assignments/AssignmentsPage.jsx';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
@@ -65,6 +68,8 @@ export default function App() {
           <Route path="/admin/attributions" element={<AssignmentsPage />} />
           <Route path="/admin/salles" element={<RoomsPage />} />
           <Route path="/admin/emploi-du-temps" element={<TimetablePage />} />
+          <Route path="/admin/appel" element={<RollCallPage />} />
+          <Route path="/admin/absences" element={<AbsencesPage />} />
           <Route path="/admin/evaluations" element={<EvaluationsPage />} />
           <Route path="/admin/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/admin/resultats" element={<ResultsPage />} />
@@ -77,6 +82,8 @@ export default function App() {
       <Route element={<ProtectedRoute roles={['TEACHER']} />}>
         <Route element={<AppShell />}>
           <Route path="/enseignant/emploi-du-temps" element={<MyTimetablePage />} />
+          <Route path="/enseignant/appel" element={<RollCallPage />} />
+          <Route path="/enseignant/absences" element={<AbsencesPage />} />
           <Route path="/enseignant/evaluations" element={<EvaluationsPage />} />
           <Route path="/enseignant/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/enseignant/resultats" element={<ResultsPage />} />
@@ -88,6 +95,7 @@ export default function App() {
       <Route element={<ProtectedRoute roles={['PARENT']} />}>
         <Route element={<AppShell />}>
           <Route path="/parent/emploi-du-temps" element={<ParentTimetablePage />} />
+          <Route path="/parent/absences" element={<ParentAbsencesPage />} />
           <Route path="/parent/bulletins" element={<ParentReportCardsPage />} />
           <Route path="/parent/bulletins/:studentId" element={<ReportCardPage />} />
         </Route>
