@@ -1,4 +1,14 @@
-import { CalendarDays, GraduationCap, House, Presentation, School, Users } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardList,
+  GraduationCap,
+  House,
+  Presentation,
+  School,
+  UserCheck,
+  Users,
+} from 'lucide-react';
 import { roleHome } from './roleHome.js';
 
 // Only pages that already exist are listed here.
@@ -8,6 +18,9 @@ const adminPages = [
   { to: '/admin/classes', label: 'Classes', icon: School },
   { to: '/admin/enseignants', label: 'Enseignants', icon: Presentation },
   { to: '/admin/parents', label: 'Parents', icon: Users },
+  { to: '/admin/matieres', label: 'Matières', icon: BookOpen },
+  { to: '/admin/attributions', label: 'Attributions', icon: UserCheck },
+  { to: '/admin/evaluations', label: 'Évaluations', icon: ClipboardList },
   { to: '/admin/annees', label: 'Années scolaires', icon: CalendarDays },
 ];
 

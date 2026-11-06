@@ -17,8 +17,9 @@ const sideLink = ({ isActive }) =>
     isActive ? 'border-sky bg-sky/15' : 'border-transparent hover:bg-ink/5'
   }`;
 
+// Phone tab bar: it scrolls sideways when there are many pages, each tab keeps a readable width
 const tabLink = ({ isActive }) =>
-  `flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-sm font-bold ${
+  `flex min-h-14 min-w-24 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-center text-sm font-bold ${
     isActive ? 'bg-sky/15' : ''
   }`;
 
@@ -41,7 +42,7 @@ export default function AppShell() {
       <aside className="hidden border-e border-ink/10 bg-paper p-5 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:gap-6">
         <p className="font-display text-2xl font-semibold">NextEducation</p>
 
-        <nav aria-label="Navigation principale" className="flex flex-1 flex-col gap-1">
+        <nav aria-label="Navigation principale" className="flex flex-1 flex-col gap-1 overflow-y-auto">
           {items.map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to} end className={sideLink}>
               <Icon className="size-5" aria-hidden="true" />
@@ -94,7 +95,7 @@ export default function AppShell() {
       {/* Phone: tab bar at the bottom, easy to reach with a thumb */}
       <nav
         aria-label="Navigation principale"
-        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-ink/10 bg-paper px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 overflow-x-auto border-t border-ink/10 bg-paper px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
       >
         {items.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} end className={tabLink}>
