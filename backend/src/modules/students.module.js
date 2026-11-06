@@ -48,8 +48,8 @@ router.use(authenticate);
 router.param('id', (req, res, next, v) => (/^\d+$/.test(v) ? next() : next(new AppError('Invalid id', 400))));
 
 // Fixed paths first, before /:id
-router.get('/mine', authorize('PARENT'), asyncHandler(async (req, res) => {
-  res.json({ status: 'success', data: await students.listChildrenOfUser(req.user.id) });
+router.get('/mine', authorize('PARENT', 'STUDENT'), asyncHandler(async (req, res) => {
+  res.json({ status: 'success', data: await students.listChildrenOfUser(req.user.id, req.user.role) });
 }));
 
 router.get('/export', authorize(...writeRoles), asyncHandler(async (req, res) => {
