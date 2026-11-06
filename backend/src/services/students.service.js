@@ -163,7 +163,14 @@ export const deleteStudent = (id, userId, { confirm = false } = {}) =>
   });
 
 // Row-level rule: a parent only sees their own children
-export const listChildrenOfUser = async (userId) => {
+export const listChildrenOfUser = async (userId, role) => {
+  if (role === 'STUDENT') {
+    const student = await prisma.student.findFirst({
+      where: { userId, deletedAt: null },
+      include: studentInclude,
+    });
+    return student ? [student] : [];
+  }
   const parent = await prisma.parent.findFirst({ where: { userId, deletedAt: null } });
   if (!parent) return [];
   return prisma.student.findMany({

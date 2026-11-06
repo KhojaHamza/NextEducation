@@ -60,13 +60,24 @@ router.get('/', authorize('ADMIN', 'TEACHER'), asyncHandler(async (req, res) => 
 }));
 
 // A parent sees the absences of their own children only
-router.get('/mine', authorize('PARENT'), asyncHandler(async (req, res) => {
-  const links = await prisma.studentParent.findMany({
-    where: { parent: { userId: req.user.id, deletedAt: null }, student: { deletedAt: null } },
-    select: { studentId: true },
-  });
+// A parent sees the absences of their children, a student sees their own
+router.get('/mine', authorize('PARENT', 'STUDENT'), asyncHandler(async (req, res) => {
+  let studentIds;
+  if (req.user.role === 'STUDENT') {
+    const own = await prisma.student.findMany({
+      where: { userId: req.user.id, deletedAt: null },
+      select: { id: true },
+    });
+    studentIds = own.map((s) => s.id);
+  } else {
+    const links = await prisma.studentParent.findMany({
+      where: { parent: { userId: req.user.id, deletedAt: null }, student: { deletedAt: null } },
+      select: { studentId: true },
+    });
+    studentIds = links.map((l) => l.studentId);
+  }
   const items = await prisma.absence.findMany({
-    where: { deletedAt: null, studentId: { in: links.map((l) => l.studentId) } },
+    where: { deletedAt: null, studentId: { in: studentIds } },
     include, orderBy: [{ date: 'desc' }, { id: 'desc' }], take: 200,
   });
   res.json({ status: 'success', data: items });

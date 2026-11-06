@@ -43,8 +43,8 @@ export default function ReportCardPage() {
   const [downloading, setDownloading] = useState(false);
 
   const isParent = user.role === 'PARENT';
-  const base = { ADMIN: '/admin', TEACHER: '/enseignant', PARENT: '/parent' }[user.role];
-  const backTo = isParent ? '/parent/bulletins' : `${base}/resultats`;
+  const base = { ADMIN: '/admin', TEACHER: '/enseignant', PARENT: '/parent', STUDENT: '/eleve' }[user.role];
+  const backTo = isParent ? '/parent/bulletins' : user.role === 'STUDENT' ? '/eleve/bulletins' : `${base}/resultats`;
 
   // The period and the year live in the address, so a bulletin can be shared or reloaded as is
   const term = TERMS.includes(params.get('term')) ? params.get('term') : 'ANNUAL';
