@@ -3,8 +3,10 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  CircleAlert,
   ClipboardCheck,
   ClipboardList,
+  CreditCard,
   FileText,
   GraduationCap,
   House,
@@ -14,6 +16,7 @@ import {
   UserCheck,
   UserX,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { roleHome } from './roleHome.js';
 
@@ -32,6 +35,9 @@ const adminPages = [
   { to: '/admin/absences', label: 'Absences', icon: UserX },
   { to: '/admin/evaluations', label: 'Évaluations', icon: ClipboardList },
   { to: '/admin/resultats', label: 'Résultats', icon: Trophy },
+  { to: '/admin/paiements', label: 'Paiements', icon: CreditCard },
+  { to: '/admin/impayes', label: 'Impayés', icon: CircleAlert },
+  { to: '/admin/frais', label: 'Frais scolaires', icon: Wallet },
   { to: '/admin/annees', label: 'Années scolaires', icon: CalendarDays },
 ];
 
@@ -47,6 +53,13 @@ const parentPages = [
   { to: '/parent/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
   { to: '/parent/absences', label: 'Absences', icon: UserX },
   { to: '/parent/bulletins', label: 'Bulletins', icon: FileText },
+  { to: '/parent/paiements', label: 'Paiements', icon: CreditCard },
+];
+
+const accountantPages = [
+  { to: '/comptabilite/paiements', label: 'Paiements', icon: CreditCard },
+  { to: '/comptabilite/impayes', label: 'Impayés', icon: CircleAlert },
+  { to: '/comptabilite/frais', label: 'Frais scolaires', icon: Wallet },
 ];
 
 export const navigationFor = (role) => [
@@ -54,4 +67,5 @@ export const navigationFor = (role) => [
   ...(role === 'ADMIN' ? adminPages : []),
   ...(role === 'TEACHER' ? teacherPages : []),
   ...(role === 'PARENT' ? parentPages : []),
+  ...(role === 'ACCOUNTANT' ? accountantPages : []),
 ];
