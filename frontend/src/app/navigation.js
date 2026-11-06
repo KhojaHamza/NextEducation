@@ -1,6 +1,9 @@
 import {
   BookOpen,
+  Building2,
+  CalendarClock,
   CalendarDays,
+  ClipboardCheck,
   ClipboardList,
   FileText,
   GraduationCap,
@@ -9,6 +12,7 @@ import {
   School,
   Trophy,
   UserCheck,
+  UserX,
   Users,
 } from 'lucide-react';
 import { roleHome } from './roleHome.js';
@@ -22,17 +26,28 @@ const adminPages = [
   { to: '/admin/parents', label: 'Parents', icon: Users },
   { to: '/admin/matieres', label: 'Matières', icon: BookOpen },
   { to: '/admin/attributions', label: 'Attributions', icon: UserCheck },
+  { to: '/admin/salles', label: 'Salles', icon: Building2 },
+  { to: '/admin/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
+  { to: '/admin/appel', label: 'Appel', icon: ClipboardCheck },
+  { to: '/admin/absences', label: 'Absences', icon: UserX },
   { to: '/admin/evaluations', label: 'Évaluations', icon: ClipboardList },
   { to: '/admin/resultats', label: 'Résultats', icon: Trophy },
   { to: '/admin/annees', label: 'Années scolaires', icon: CalendarDays },
 ];
 
 const teacherPages = [
+  { to: '/enseignant/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
+  { to: '/enseignant/appel', label: 'Appel', icon: ClipboardCheck },
+  { to: '/enseignant/absences', label: 'Absences', icon: UserX },
   { to: '/enseignant/evaluations', label: 'Évaluations', icon: ClipboardList },
   { to: '/enseignant/resultats', label: 'Résultats', icon: Trophy },
 ];
 
-const parentPages = [{ to: '/parent/bulletins', label: 'Bulletins', icon: FileText }];
+const parentPages = [
+  { to: '/parent/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
+  { to: '/parent/absences', label: 'Absences', icon: UserX },
+  { to: '/parent/bulletins', label: 'Bulletins', icon: FileText },
+];
 
 export const navigationFor = (role) => [
   { to: roleHome[role], label: 'Accueil', icon: House },
