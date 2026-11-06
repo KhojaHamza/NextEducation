@@ -10,9 +10,11 @@ const SelectField = forwardRef(function SelectField(
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block font-bold">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={id} className="mb-1.5 block font-bold">
+          {label}
+        </label>
+      )}
       {hint && !error && (
         <p id={`${id}-hint`} className="mb-1.5 text-sm text-ink/70">
           {hint}

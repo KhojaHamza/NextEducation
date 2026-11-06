@@ -7,6 +7,7 @@ import ParentAbsencesPage from './features/absences/ParentAbsencesPage.jsx';
 import RollCallPage from './features/absences/RollCallPage.jsx';
 import AnnouncementsPage from './features/announcements/AnnouncementsPage.jsx';
 import AssignmentsPage from './features/assignments/AssignmentsPage.jsx';
+import AuditLogsPage from './features/auditLogs/AuditLogsPage.jsx';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
@@ -38,9 +39,9 @@ import SubjectsPage from './features/subjects/SubjectsPage.jsx';
 import MyTimetablePage from './features/timetable/MyTimetablePage.jsx';
 import ParentTimetablePage from './features/timetable/ParentTimetablePage.jsx';
 import TimetablePage from './features/timetable/TimetablePage.jsx';
+import UsersPage from './features/users/UsersPage.jsx';
 import AppShell from './layouts/AppShell.jsx';
 
-// Roles that already have a real home page; the others keep the placeholder for now
 const homes = { ADMIN: <AdminDashboard />, TEACHER: <TeacherHome />, PARENT: <ParentHome /> };
 
 export default function App() {
@@ -53,7 +54,6 @@ export default function App() {
         <Route path={PASSWORD_PATH} element={<ChangePasswordPage />} />
       </Route>
 
-      {/* Home page of each role */}
       {Object.entries(roleHome).map(([role, path]) => (
         <Route key={role} element={<ProtectedRoute roles={[role]} />}>
           <Route element={<AppShell />}>
@@ -62,7 +62,6 @@ export default function App() {
         </Route>
       ))}
 
-      {/* Shared pages: messages, announcements, notifications (all authenticated roles) */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/messages" element={<MessagesPage />} />
@@ -72,7 +71,6 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Administration pages */}
       <Route element={<ProtectedRoute roles={['ADMIN']} />}>
         <Route element={<AppShell />}>
           <Route path="/admin/eleves" element={<StudentsPage />} />
@@ -96,10 +94,11 @@ export default function App() {
           <Route path="/admin/impayes" element={<OverduePage />} />
           <Route path="/admin/frais" element={<FeesPage />} />
           <Route path="/admin/annees" element={<SchoolYearsPage />} />
+          <Route path="/admin/utilisateurs" element={<UsersPage />} />
+          <Route path="/admin/journal" element={<AuditLogsPage />} />
         </Route>
       </Route>
 
-      {/* Teacher pages */}
       <Route element={<ProtectedRoute roles={['TEACHER']} />}>
         <Route element={<AppShell />}>
           <Route path="/enseignant/emploi-du-temps" element={<MyTimetablePage />} />
@@ -112,7 +111,6 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Parent pages */}
       <Route element={<ProtectedRoute roles={['PARENT']} />}>
         <Route element={<AppShell />}>
           <Route path="/parent/emploi-du-temps" element={<ParentTimetablePage />} />
@@ -123,7 +121,6 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Accountant pages */}
       <Route element={<ProtectedRoute roles={['ACCOUNTANT']} />}>
         <Route element={<AppShell />}>
           <Route path="/comptabilite/paiements" element={<PaymentsPage />} />
