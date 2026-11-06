@@ -1,11 +1,15 @@
 import {
   BookOpen,
+  Building2,
+  CalendarClock,
   CalendarDays,
   ClipboardList,
+  FileText,
   GraduationCap,
   House,
   Presentation,
   School,
+  Trophy,
   UserCheck,
   Users,
 } from 'lucide-react';
@@ -20,14 +24,27 @@ const adminPages = [
   { to: '/admin/parents', label: 'Parents', icon: Users },
   { to: '/admin/matieres', label: 'Matières', icon: BookOpen },
   { to: '/admin/attributions', label: 'Attributions', icon: UserCheck },
+  { to: '/admin/salles', label: 'Salles', icon: Building2 },
+  { to: '/admin/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
   { to: '/admin/evaluations', label: 'Évaluations', icon: ClipboardList },
+  { to: '/admin/resultats', label: 'Résultats', icon: Trophy },
   { to: '/admin/annees', label: 'Années scolaires', icon: CalendarDays },
 ];
 
-const teacherPages = [{ to: '/enseignant/evaluations', label: 'Évaluations', icon: ClipboardList }];
+const teacherPages = [
+  { to: '/enseignant/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
+  { to: '/enseignant/evaluations', label: 'Évaluations', icon: ClipboardList },
+  { to: '/enseignant/resultats', label: 'Résultats', icon: Trophy },
+];
+
+const parentPages = [
+  { to: '/parent/emploi-du-temps', label: 'Emploi du temps', icon: CalendarClock },
+  { to: '/parent/bulletins', label: 'Bulletins', icon: FileText },
+];
 
 export const navigationFor = (role) => [
   { to: roleHome[role], label: 'Accueil', icon: House },
   ...(role === 'ADMIN' ? adminPages : []),
   ...(role === 'TEACHER' ? teacherPages : []),
+  ...(role === 'PARENT' ? parentPages : []),
 ];

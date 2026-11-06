@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CircleCheck, Pencil, Plus, SearchX, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, CircleCheck, FileText, Pencil, Plus, SearchX, Trash2, UserPlus } from 'lucide-react';
 import Alert from '../../components/ui/Alert.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -131,6 +131,13 @@ export default function StudentDetailPage() {
         description={`Matricule ${student.matricule}`}
         actions={
           <>
+            <Link
+              to={`/admin/bulletins/${student.id}`}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-ink/15 bg-paper px-5 py-2.5 font-bold text-ink transition-colors hover:border-ink/40"
+            >
+              <FileText className="size-4" aria-hidden="true" />
+              Bulletin
+            </Link>
             <Button variant="secondary" onClick={() => navigate(`/admin/eleves/${student.id}/modifier`)}>
               <Pencil className="size-4" aria-hidden="true" />
               Modifier
