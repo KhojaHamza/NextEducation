@@ -14,6 +14,9 @@ import EvaluationsPage from './features/evaluations/EvaluationsPage.jsx';
 import GradeEntryPage from './features/evaluations/GradeEntryPage.jsx';
 import { peopleConfig } from './features/people/config.js';
 import PeoplePage from './features/people/PeoplePage.jsx';
+import ParentReportCardsPage from './features/reportCards/ParentReportCardsPage.jsx';
+import ReportCardPage from './features/reportCards/ReportCardPage.jsx';
+import ResultsPage from './features/reportCards/ResultsPage.jsx';
 import SchoolYearsPage from './features/schoolYears/SchoolYearsPage.jsx';
 import StudentDetailPage from './features/students/StudentDetailPage.jsx';
 import StudentFormPage from './features/students/StudentFormPage.jsx';
@@ -58,6 +61,8 @@ export default function App() {
           <Route path="/admin/attributions" element={<AssignmentsPage />} />
           <Route path="/admin/evaluations" element={<EvaluationsPage />} />
           <Route path="/admin/evaluations/:id/notes" element={<GradeEntryPage />} />
+          <Route path="/admin/resultats" element={<ResultsPage />} />
+          <Route path="/admin/bulletins/:studentId" element={<ReportCardPage />} />
           <Route path="/admin/annees" element={<SchoolYearsPage />} />
         </Route>
       </Route>
@@ -67,6 +72,16 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/enseignant/evaluations" element={<EvaluationsPage />} />
           <Route path="/enseignant/evaluations/:id/notes" element={<GradeEntryPage />} />
+          <Route path="/enseignant/resultats" element={<ResultsPage />} />
+          <Route path="/enseignant/bulletins/:studentId" element={<ReportCardPage />} />
+        </Route>
+      </Route>
+
+      {/* Parent pages */}
+      <Route element={<ProtectedRoute roles={['PARENT']} />}>
+        <Route element={<AppShell />}>
+          <Route path="/parent/bulletins" element={<ParentReportCardsPage />} />
+          <Route path="/parent/bulletins/:studentId" element={<ReportCardPage />} />
         </Route>
       </Route>
 
