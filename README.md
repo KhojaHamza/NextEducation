@@ -193,30 +193,63 @@ The project follows a modular organization to improve maintainability and scalab
 NextEducation/
 │
 ├── backend/
+│   │
 │   ├── prisma/
+│   │
 │   ├── src/
 │   │   ├── config/
-│   │   ├── modules/
-│   │   ├── services/
+│   │   ├── controllers/
+│   │   ├── core/
+│   │   ├── jobs/
 │   │   ├── middlewares/
+│   │   ├── modules/
 │   │   ├── routes/
-│   │   └── utils/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   │
+│   │   ├── app.js
+│   │   └── server.js
+│   │
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── package-lock.json
 │   ├── package.json
-│   └── .env
-│
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── app/
-│   │   ├── components/
-│   │   ├── features/
-│   │   ├── hooks/
-│   │   └── ...
-│   └── package.json
+│   └── prisma.config.ts
 │
 ├── docs/
 │
-└── README.md
+├── frontend/
+│   │
+│   ├── public/
+│   │
+│   ├── src/
+│   │   ├── api/
+│   │   ├── app/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   │   └── ui/
+│   │   ├── features/
+│   │   ├── hooks/
+│   │   ├── layouts/
+│   │   │
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   │
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   └── vite.config.js
+│
+├── .editorconfig
+├── .gitignore
+├── LICENSE
+├── README.md
+├── docker-compose.yml
+├── package-lock.json
+└── package.json
 ```
 
 ## Security and Access Control
