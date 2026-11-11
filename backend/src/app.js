@@ -1,3 +1,8 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import rateLimit from 'express-rate-limit'; // AJOUT
+
 import schoolYearsRoutes from './modules/schoolYears.module.js';
 import classesRoutes from './modules/classes.module.js';
 import subjectsRoutes from './modules/subjects.module.js';
@@ -28,14 +33,29 @@ import pushRoutes from './routes/push.routes.js';
 
 import timetableRoutes from './modules/timetable.module.js';
 
-
-
 const app = express();
+
+// AJOUT 1 : derrière Railway/Render, il y a un proxy. Sans cette ligne,
+// le limiteur de tentatives verrait l'IP du proxy et bloquerait tout le monde ensemble.
+app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
-app.use(morgan('dev'));
+// AJOUT 2 : journaux plus complets en production
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// AJOUT 3 : max 10 tentatives de connexion / 15 min / IP
+app.use(
+  '/api/auth/login',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Trop de tentatives, réessayez dans 15 minutes.' },
+  }),
+);
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
@@ -63,6 +83,19 @@ app.use('/api/announcements', announcementsRoutes);
 app.use('/api/push', pushRoutes);
 
 app.use('/api/timetable', timetableRoutes);
+
+// AJOUT 4 : Express sert le frontend compilé (frontend/dist), s'il existe.
+// Ce bloc doit rester APRÈS les routes /api et AVANT notFound.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const distDir = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(path.join(distDir, 'index.html'))) {
+  app.use(express.static(distDir));
+  app.get('/{*splat}', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(distDir, 'index.html'));
+  });
+}
+
 app.use(notFound);
 app.use(errorHandler);
 export default app;
