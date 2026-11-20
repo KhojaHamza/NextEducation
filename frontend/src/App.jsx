@@ -24,6 +24,7 @@ import TeacherHome from './features/dashboard/TeacherHome.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
 import EvaluationsPage from './features/evaluations/EvaluationsPage.jsx';
 import GradeEntryPage from './features/evaluations/GradeEntryPage.jsx';
+import HomeworksPage from './features/homeworks/HomeworksPage.jsx';
 import FeesPage from './features/fees/FeesPage.jsx';
 import MessagesPage from './features/messages/MessagesPage.jsx';
 import ThreadPage from './features/messages/ThreadPage.jsx';
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:threadId" element={<ThreadPage />} />
           <Route path="/annonces" element={<AnnouncementsPage />} />
+          <Route path="/devoirs" element={<HomeworksPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
