@@ -9,6 +9,7 @@ import RollCallPage from './features/absences/RollCallPage.jsx';
 import AnnouncementsPage from './features/announcements/AnnouncementsPage.jsx';
 import AssignmentsPage from './features/assignments/AssignmentsPage.jsx';
 import AuditLogsPage from './features/auditLogs/AuditLogsPage.jsx';
+import CalendarPage from './features/calendar/CalendarPage.jsx';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import PlatformDashboard from './features/platform/PlatformDashboard.jsx';
@@ -86,6 +87,7 @@ export default function App() {
           <Route path="/messages/:threadId" element={<ThreadPage />} />
           <Route path="/annonces" element={<AnnouncementsPage />} />
           <Route path="/devoirs" element={<HomeworksPage />} />
+          <Route path="/calendrier" element={<CalendarPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>

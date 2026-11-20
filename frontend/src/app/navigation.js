@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  CalendarRange,
   CircleAlert,
   ClipboardCheck,
   ClipboardList,
@@ -79,6 +80,7 @@ const homeworkPages = [
 ];
 
 const sharedPages = [
+  { to: '/calendrier', label: 'Calendrier', icon: CalendarRange },
   { to: '/messages', label: 'Messages', icon: MessageCircle },
   { to: '/annonces', label: 'Annonces', icon: Megaphone },
 ];
