@@ -13,6 +13,14 @@ enum Role {
   PARENT
   STUDENT
   ACCOUNTANT
+  SUPER_ADMIN
+}
+
+enum SchoolStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  DISABLED
 }
 
 enum Gender {
@@ -29,9 +37,53 @@ enum DayOfWeek {
   SATURDAY
 }
 
+model School {
+  id              Int          @id @default(autoincrement())
+  code            String       @unique
+  name            String
+  status          SchoolStatus @default(TRIAL)
+  plan            String       @default("basic")
+  subscriptionEnd DateTime?    @db.Date
+  currency        String       @default("TND")
+  address         String?
+  phone           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  users               User[]
+  schoolYears         SchoolYear[]
+  teachers            Teacher[]
+  parents             Parent[]
+  students            Student[]
+  studentParents      StudentParent[]
+  classes             SchoolClass[]
+  enrollments         Enrollment[]
+  subjects            Subject[]
+  rooms               Room[]
+  teachingAssignments TeachingAssignment[]
+  auditLogs           AuditLog[]
+  evaluations         Evaluation[]
+  grades              Grade[]
+  absences            Absence[]
+  feeItems            FeeItem[]
+  payments            Payment[]
+  notifications       Notification[]
+  messages            Message[]
+  messageRecipients   MessageRecipient[]
+  messageAttachments  MessageAttachment[]
+  messageAccessLogs   MessageAccessLog[]
+  announcements       Announcement[]
+  pushSubscriptions   PushSubscription[]
+  timetableSlots      TimetableSlot[]
+
+  @@map("schools")
+}
+
 model SchoolYear {
   id        Int       @id @default(autoincrement())
-  label     String    @unique
+  schoolId  Int
+  school    School    @relation(fields: [schoolId], references: [id])
+  label     String
   startDate DateTime
   endDate   DateTime
   isCurrent Boolean   @default(false)
@@ -46,12 +98,16 @@ model SchoolYear {
   feeItems    FeeItem[]
   payments    Payment[]
 
+  @@unique([schoolId, label])
+  @@index([schoolId])
   @@map("school_years")
 }
 
 model User {
   id                 Int       @id @default(autoincrement())
-  email              String    @unique
+  schoolId           Int?
+  school             School?   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  email              String
   passwordHash       String
   role               Role
   firstName          String
@@ -78,11 +134,15 @@ model User {
   announcementsAuthored Announcement[]     @relation("AnnouncementAuthor")
   pushSubscriptions     PushSubscription[]
 
+  @@unique([schoolId, email])
+  @@index([schoolId])
   @@map("users")
 }
 
 model Teacher {
   id         Int       @id @default(autoincrement())
+  schoolId   Int
+  school     School    @relation(fields: [schoolId], references: [id])
   userId     Int       @unique
   user       User      @relation(fields: [userId], references: [id])
   speciality String?
@@ -95,11 +155,14 @@ model Teacher {
   assignments     TeachingAssignment[]
   timetableSlots  TimetableSlot[]
 
+  @@index([schoolId])
   @@map("teachers")
 }
 
 model Parent {
   id        Int       @id @default(autoincrement())
+  schoolId  Int
+  school    School    @relation(fields: [schoolId], references: [id])
   userId    Int       @unique
   user      User      @relation(fields: [userId], references: [id])
   address   String?
@@ -109,14 +172,17 @@ model Parent {
 
   children StudentParent[]
 
+  @@index([schoolId])
   @@map("parents")
 }
 
 model Student {
   id           Int        @id @default(autoincrement())
+  schoolId     Int
+  school       School     @relation(fields: [schoolId], references: [id])
   userId       Int?       @unique
   user         User?      @relation(fields: [userId], references: [id])
-  matricule    String     @unique
+  matricule    String
   firstName    String
   lastName     String
   birthDate    DateTime
@@ -136,22 +202,29 @@ model Student {
   payments    Payment[]
   messages    Message[]
 
+  @@unique([schoolId, matricule])
+  @@index([schoolId])
   @@map("students")
 }
 
 model StudentParent {
+  schoolId     Int
+  school       School   @relation(fields: [schoolId], references: [id])
   studentId    Int
   parentId     Int
   relationship String
-  student      Student @relation(fields: [studentId], references: [id])
-  parent       Parent  @relation(fields: [parentId], references: [id])
+  student      Student  @relation(fields: [studentId], references: [id])
+  parent       Parent   @relation(fields: [parentId], references: [id])
 
   @@id([studentId, parentId])
+  @@index([schoolId])
   @@map("student_parents")
 }
 
 model SchoolClass {
   id                Int        @id @default(autoincrement())
+  schoolId          Int
+  school            School     @relation(fields: [schoolId], references: [id])
   level             String
   section           String
   capacity          Int
@@ -169,12 +242,15 @@ model SchoolClass {
   absences       Absence[]
   timetableSlots TimetableSlot[]
 
-  @@unique([level, section, schoolYearId])
+  @@unique([schoolId, level, section, schoolYearId])
+  @@index([schoolId])
   @@map("classes")
 }
 
 model Enrollment {
   id           Int         @id @default(autoincrement())
+  schoolId     Int
+  school       School      @relation(fields: [schoolId], references: [id])
   studentId    Int
   classId      Int
   schoolYearId Int         @map("annee_scolaire_id")
@@ -185,11 +261,14 @@ model Enrollment {
   deletedAt    DateTime?
 
   @@unique([studentId, schoolYearId])
+  @@index([schoolId])
   @@map("enrollments")
 }
 
 model Subject {
   id          Int       @id @default(autoincrement())
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
   name        String
   coefficient Decimal   @db.Decimal(4, 2)
   level       String
@@ -201,13 +280,16 @@ model Subject {
   evaluations    Evaluation[]
   timetableSlots TimetableSlot[]
 
-  @@unique([name, level])
+  @@unique([schoolId, name, level])
+  @@index([schoolId])
   @@map("subjects")
 }
 
 model Room {
   id          Int       @id @default(autoincrement())
-  name        String    @unique
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
+  name        String
   capacity    Int
   isAvailable Boolean   @default(true)
   createdAt   DateTime  @default(now())
@@ -216,11 +298,15 @@ model Room {
 
   timetableSlots TimetableSlot[]
 
+  @@unique([schoolId, name])
+  @@index([schoolId])
   @@map("rooms")
 }
 
 model TeachingAssignment {
   id          Int         @id @default(autoincrement())
+  schoolId    Int
+  school      School      @relation(fields: [schoolId], references: [id])
   teacherId   Int
   subjectId   Int
   classId     Int
@@ -230,11 +316,14 @@ model TeachingAssignment {
   deletedAt   DateTime?
 
   @@unique([teacherId, subjectId, classId])
+  @@index([schoolId])
   @@map("teaching_assignments")
 }
 
 model AuditLog {
   id        Int      @id @default(autoincrement())
+  schoolId  Int
+  school    School   @relation(fields: [schoolId], references: [id])
   userId    Int?
   user      User?    @relation(fields: [userId], references: [id])
   action    String
@@ -244,6 +333,7 @@ model AuditLog {
   newValues Json?
   createdAt DateTime @default(now())
 
+  @@index([schoolId])
   @@map("audit_logs")
 }
 
@@ -272,6 +362,8 @@ enum JustificationStatus {
 
 model Evaluation {
   id        Int            @id @default(autoincrement())
+  schoolId  Int
+  school    School         @relation(fields: [schoolId], references: [id])
   title     String
   type      EvaluationType
   term      Term
@@ -289,11 +381,14 @@ model Evaluation {
   grades      Grade[]
 
   @@index([classId, subjectId, term])
+  @@index([schoolId])
   @@map("evaluations")
 }
 
 model Grade {
   id           Int       @id @default(autoincrement())
+  schoolId     Int
+  school       School    @relation(fields: [schoolId], references: [id])
   evaluationId Int
   studentId    Int
   score        Decimal   @db.Decimal(5, 2)
@@ -306,11 +401,14 @@ model Grade {
   student    Student    @relation(fields: [studentId], references: [id])
 
   @@unique([evaluationId, studentId])
+  @@index([schoolId])
   @@map("grades")
 }
 
 model Absence {
   id                  Int                 @id @default(autoincrement())
+  schoolId            Int
+  school              School              @relation(fields: [schoolId], references: [id])
   studentId           Int
   classId             Int
   schoolYearId        Int                 @map("annee_scolaire_id")
@@ -332,6 +430,7 @@ model Absence {
 
   @@unique([studentId, date, period])
   @@index([classId, date])
+  @@index([schoolId])
   @@map("absences")
 }
 
@@ -361,10 +460,12 @@ enum NotificationStatus {
 
 model FeeItem {
   id           Int       @id @default(autoincrement())
+  schoolId     Int
+  school       School    @relation(fields: [schoolId], references: [id])
   schoolYearId Int       @map("annee_scolaire_id")
   name         String
   type         FeeType
-  level        String? // null = applies to every level
+  level        String?
   amount       Decimal   @db.Decimal(10, 3)
   dueDate      DateTime  @db.Date
   createdAt    DateTime  @default(now())
@@ -374,12 +475,15 @@ model FeeItem {
   schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id])
 
   @@index([schoolYearId])
+  @@index([schoolId])
   @@map("fee_items")
 }
 
 model Payment {
   id            Int           @id @default(autoincrement())
-  receiptNumber String        @unique
+  schoolId      Int
+  school        School        @relation(fields: [schoolId], references: [id])
+  receiptNumber String
   studentId     Int
   schoolYearId  Int           @map("annee_scolaire_id")
   amount        Decimal       @db.Decimal(10, 3)
@@ -399,14 +503,18 @@ model Payment {
   recordedBy  User?      @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
   cancelledBy User?      @relation("PaymentCancelledBy", fields: [cancelledById], references: [id])
 
+  @@unique([schoolId, receiptNumber])
   @@index([studentId, schoolYearId])
+  @@index([schoolId])
   @@map("payments")
 }
 
 model Notification {
   id        Int                 @id @default(autoincrement())
+  schoolId  Int
+  school    School              @relation(fields: [schoolId], references: [id])
   userId    Int
-  type      String // PAYMENT_RECEIVED, PAYMENT_REMINDER, PAYMENT_CANCELLED...
+  type      String
   channel   NotificationChannel
   title     String
   body      String
@@ -421,6 +529,7 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([type, createdAt])
+  @@index([schoolId])
   @@map("notifications")
 }
 
@@ -436,9 +545,11 @@ enum MessageAccessAction {
 
 model Message {
   id        Int           @id @default(autoincrement())
-  threadId  Int? // root message of the conversation; null for the root itself
+  schoolId  Int
+  school    School        @relation(fields: [schoolId], references: [id])
+  threadId  Int?
   senderId  Int
-  studentId Int? // the child the conversation is about
+  studentId Int?
   subject   String        @default("")
   body      String        @default("")
   important Boolean       @default(false)
@@ -456,39 +567,48 @@ model Message {
 
   @@index([threadId])
   @@index([senderId, status])
+  @@index([schoolId])
   @@map("messages")
 }
 
 model MessageRecipient {
+  schoolId  Int
+  school    School    @relation(fields: [schoolId], references: [id])
   messageId Int
   userId    Int
   readAt    DateTime?
-  hiddenAt  DateTime? // recipient-side deletion: hides the message from this user's inbox only
+  hiddenAt  DateTime?
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id])
 
   @@id([messageId, userId])
   @@index([userId, hiddenAt])
+  @@index([schoolId])
   @@map("message_recipients")
 }
 
 model MessageAttachment {
   id         Int      @id @default(autoincrement())
+  schoolId   Int
+  school     School   @relation(fields: [schoolId], references: [id])
   messageId  Int
-  fileName   String // original name, display only
+  fileName   String
   mimeType   String
   size       Int
-  storageKey String   @unique // random name on disk, never the original name
+  storageKey String   @unique
   createdAt  DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@map("message_attachments")
 }
 
 model MessageAccessLog {
   id           Int                 @id @default(autoincrement())
+  schoolId     Int
+  school       School              @relation(fields: [schoolId], references: [id])
   userId       Int
   threadId     Int
   messageId    Int?
@@ -500,15 +620,18 @@ model MessageAccessLog {
 
   @@index([threadId, createdAt])
   @@index([userId, createdAt])
+  @@index([schoolId])
   @@map("message_access_logs")
 }
 
 model Announcement {
   id          Int      @id @default(autoincrement())
+  schoolId    Int
+  school      School   @relation(fields: [schoolId], references: [id])
   title       String
   body        String
   audience    Role[]
-  correctsId  Int? // set when this announcement corrects an earlier one
+  correctsId  Int?
   authorId    Int
   publishedAt DateTime @default(now())
 
@@ -517,13 +640,16 @@ model Announcement {
   corrections Announcement[] @relation("AnnouncementCorrection")
 
   @@index([publishedAt])
+  @@index([schoolId])
   @@map("announcements")
 }
 
 model PushSubscription {
   id        Int      @id @default(autoincrement())
+  schoolId  Int
+  school    School   @relation(fields: [schoolId], references: [id])
   userId    Int
-  endpoint  String   @unique
+  endpoint  String
   p256dh    String
   auth      String
   userAgent String?
@@ -531,18 +657,22 @@ model PushSubscription {
 
   user User @relation(fields: [userId], references: [id])
 
+  @@unique([userId, endpoint])
   @@index([userId])
+  @@index([schoolId])
   @@map("push_subscriptions")
 }
 
 model TimetableSlot {
   id          Int       @id @default(autoincrement())
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
   classId     Int
   subjectId   Int
   teacherId   Int
   roomId      Int?
   dayOfWeek   DayOfWeek
-  startMinute Int // minutes since midnight: 8h30 = 510
+  startMinute Int
   endMinute   Int
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -556,5 +686,20 @@ model TimetableSlot {
   @@index([classId, dayOfWeek])
   @@index([teacherId, dayOfWeek])
   @@index([roomId, dayOfWeek])
+  @@index([schoolId])
   @@map("timetable_slots")
+}
+model PlatformAuditLog {
+  id             Int      @id @default(autoincrement())
+  userId         Int?
+  action         String
+  entity         String
+  entityId       Int?
+  targetSchoolId Int?
+  details        Json?
+  createdAt      DateTime @default(now())
+
+  @@index([targetSchoolId])
+  @@index([createdAt])
+  @@map("platform_audit_logs")
 }

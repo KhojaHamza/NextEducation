@@ -1,0 +1,62 @@
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { prisma, platformPrisma } from '../config/prisma.js';
+import { AppError } from '../utils/AppError.js';
+
+const signToken = (user) =>
+  jwt.sign({ sub: String(user.id), role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+  });
+
+// School user login. Same error message for unknown school / email / password.
+export const login = async (schoolCode, email, password) => {
+  const school = await platformPrisma.school.findFirst({
+    where: { code: schoolCode },
+    select: { id: true, status: true, name: true, currency: true },
+  });
+  
+  const fail = () => new AppError('Invalid credentials', 401);
+  if (!school || school.status !== 'ACTIVE') throw fail();
+
+  // On utilise platformPrisma pour chercher l'utilisateur avec son schoolId
+  const user = await platformPrisma.user.findFirst({
+    where: { email: email.toLowerCase(), schoolId: school.id, deletedAt: null },
+  });
+
+  if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw fail();
+  }
+
+  const { passwordHash, ...safeUser } = user;
+  return {
+    token: signToken(user),
+    user: safeUser,
+    school: { id: school.id, code: schoolCode, name: school.name, currency: school.currency },
+  };
+};
+
+export const platformLogin = async (email, password) => {
+  const user = await platformPrisma.user.findFirst({
+    where: { email: email.toLowerCase(), role: 'SUPER_ADMIN', deletedAt: null },
+  });
+  if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw new AppError('Invalid credentials', 401);
+  }
+  const { passwordHash, ...safeUser } = user;
+  return { token: signToken(user), user: safeUser };
+};
+
+export const changePassword = async (userId, currentPassword, newPassword) => {
+  const user = await platformPrisma.user.findFirst({ where: { id: userId, deletedAt: null } });
+  if (!user) throw new AppError('User not found', 401);
+  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    throw new AppError('Current password is incorrect', 400);
+  }
+  await platformPrisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash: await bcrypt.hash(newPassword, 10),
+      mustChangePassword: false,
+    },
+  });
+};

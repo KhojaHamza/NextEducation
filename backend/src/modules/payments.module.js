@@ -153,7 +153,7 @@ router.get('/:id/receipt', authorize('ADMIN', 'ACCOUNTANT', 'PARENT'), asyncHand
 }));
 
 router.get('/:id', authorize(...finance), asyncHandler(async (req, res) => {
-  const payment = await prisma.payment.findUnique({
+  const payment = await prisma.payment.findFirst({
     where: { id: Number(req.params.id) }, include: paymentInclude,
   });
   if (!payment) throw new AppError('Payment not found', 404);

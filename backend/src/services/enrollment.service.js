@@ -12,8 +12,8 @@ export const enrollStudent = async (tx, { studentId, classId }) => {
   const student = await tx.student.findFirst({ where: { id: studentId, deletedAt: null } });
   if (!student) throw new AppError('Student not found', 404);
 
-  const existing = await tx.enrollment.findUnique({
-    where: { studentId_schoolYearId: { studentId, schoolYearId: cls.schoolYearId } },
+  const existing = await tx.enrollment.findFirst({
+    where: { studentId, schoolYearId: cls.schoolYearId },
   });
   if (existing && !existing.deletedAt) {
     throw new AppError('Student is already enrolled for this school year: use a transfer', 409);

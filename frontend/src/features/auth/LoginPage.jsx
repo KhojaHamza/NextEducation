@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,20 +10,21 @@ import { homeFor } from '../../app/roleHome.js';
 import { useAuth } from './useAuth.js';
 
 const schema = z.object({
+  schoolCode: z.string().trim().optional(),
   email: z
     .string()
     .trim()
     .min(1, 'Saisis ton adresse e-mail.')
-    .email('Cette adresse e-mail n’est pas valide.'),
+    .email('Cette adresse e-mail n’est pas valide.').or(z.string().endsWith('.local')),
   password: z.string().min(1, 'Saisis ton mot de passe.'),
 });
 
-// Turns an API error into a sentence that tells the person what to do
 const messageFor = (err) => {
   if (err.status === 0) return err.message;
   if (err.status === 401) return 'Adresse e-mail ou mot de passe incorrect.';
-  if (err.status === 403) return 'Ce compte est désactivé. Contacte l’administration de l’école.';
-  return 'Connexion impossible pour le moment. Réessaie dans un instant.';
+  if (err.status === 403) return 'Ce compte est désactivé ou l’école est suspendue. Contacte l’administration.';
+  if (err.status === 429) return 'Trop de tentatives. Réessaie dans quelques minutes.';
+  return err.message || 'Connexion impossible pour le moment.';
 };
 
 const features = [
@@ -34,31 +35,56 @@ const features = [
   { label: 'Messages', dot: 'bg-grape' },
 ];
 
+// Le code d'ecole peut venir de l'adresse : /e/<code>/connexion
 export default function LoginPage() {
+  const { schoolCode } = useParams();
+  const fixedCode = schoolCode ? schoolCode.trim().toLowerCase() : null;
+  return <LoginForm key={fixedCode ?? 'free'} fixedCode={fixedCode} />;
+}
+
+function LoginForm({ fixedCode }) {
   const { user, status, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  // Le champ n'apparait que si le meme e-mail et mot de passe existent dans plusieurs ecoles
+  const [needSchoolCode, setNeedSchoolCode] = useState(false);
 
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } });
+  } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { schoolCode: fixedCode ?? '', email: '', password: '' },
+  });
 
-  const onSubmit = async ({ email, password }) => {
+  const onSubmit = async ({ schoolCode, email, password }) => {
     setServerError(null);
+    const typed = (schoolCode ?? '').trim().toLowerCase();
+    const code = fixedCode ?? (needSchoolCode ? typed : '');
+    if (needSchoolCode && !fixedCode && !code) {
+      setError('schoolCode', { message: 'Saisis le code de ton école.' });
+      return;
+    }
     try {
-      const loggedIn = await login(email, password);
+      const loggedIn = await login(code || undefined, email, password);
       navigate(location.state?.from ?? homeFor(loggedIn.role), { replace: true });
     } catch (err) {
+      if (err.status === 409 && !fixedCode) {
+        setNeedSchoolCode(true);
+        setServerError('Ton adresse e-mail existe dans plusieurs écoles. Saisis le code de ton école.');
+        return;
+      }
       setServerError(messageFor(err));
     }
   };
 
-  // Someone who is already logged in has nothing to do here
-  if (status === 'authenticated') return <Navigate to={homeFor(user.role)} replace />;
+  if (status === 'authenticated') {
+    return <Navigate to={homeFor(user.role)} replace />;
+  }
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
@@ -88,6 +114,28 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
             {serverError && <Alert tone="danger">{serverError}</Alert>}
+
+            {fixedCode ? (
+              <div className="rounded-2xl bg-paper px-4 py-3">
+                <input type="hidden" {...register('schoolCode')} />
+                <p className="text-sm text-ink/70">École</p>
+                <p className="text-lg font-bold">{fixedCode}</p>
+                <Link to="/connexion" className="text-sm font-bold text-sky underline">
+                  Ce n’est pas ton école ?
+                </Link>
+              </div>
+            ) : needSchoolCode ? (
+              <TextField
+                label="Code de l'école"
+                type="text"
+                placeholder="ex: ali-slimen"
+                autoComplete="organization"
+                error={errors.schoolCode?.message}
+                {...register('schoolCode')}
+              />
+            ) : (
+              <input type="hidden" {...register('schoolCode')} />
+            )}
 
             <TextField
               label="Adresse e-mail"

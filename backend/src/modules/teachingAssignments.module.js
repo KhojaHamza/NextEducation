@@ -82,8 +82,8 @@ router.post('/', authorize('ADMIN'), validate(schema), asyncHandler(async (req, 
       throw new AppError(`Subject level (${subject.level}) does not match class level (${cls.level})`, 400);
     }
 
-    const existing = await tx.teachingAssignment.findUnique({
-      where: { teacherId_subjectId_classId: { teacherId, subjectId, classId } },
+    const existing = await tx.teachingAssignment.findFirst({
+      where: { teacherId, subjectId, classId },
     });
     if (existing && !existing.deletedAt) throw new AppError('This assignment already exists', 409);
 

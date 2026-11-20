@@ -3,19 +3,35 @@ import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import * as controller from '../controllers/auth.controller.js';
 import { validate } from '../middlewares/validate.js';
-import { authenticate, authenticateAllowingTemporaryPassword, authorize } from '../middlewares/auth.js';
+import {
+  authenticate,
+  authenticateAllowingTemporaryPassword,
+  authorize,
+} from '../middlewares/auth.js';
 
 const router = Router();
 
-// Slows down brute-force attempts on the login route
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   message: { status: 'error', message: 'Too many login attempts, try again later' },
 });
 
+const platformLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  message: { status: 'error', message: 'Too many login attempts, try again later' },
+});
+
+// On accepte n'importe quel format d'email pour le local (.local)
 const loginSchema = z.object({
-  email: z.string().email(),
+  schoolCode: z.string().trim().optional(),
+  email: z.string().trim().min(1),
+  password: z.string().min(1),
+});
+
+const platformLoginSchema = z.object({
+  email: z.string().trim().min(1),
   password: z.string().min(1),
 });
 
@@ -29,12 +45,8 @@ const passwordSchema = z.object({
 });
 
 router.post('/login', loginLimiter, validate(loginSchema), controller.login);
+router.post('/platform/login', platformLimiter, validate(platformLoginSchema), controller.platformLogin);
 router.get('/me', authenticateAllowingTemporaryPassword, controller.me);
 router.patch('/password', authenticateAllowingTemporaryPassword, validate(passwordSchema), controller.changePassword);
-
-// TEMPORARY route to test RBAC, we remove it later
-router.get('/admin-only', authenticate, authorize('ADMIN'), (req, res) => {
-  res.json({ status: 'success', message: 'Welcome, admin' });
-});
 
 export default router;

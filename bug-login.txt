@@ -1,0 +1,1282 @@
+=== BUG REPORT : CONNEXION MULTI-TENANT ===
+
+--- LE PROBLEME ---
+L'application a été migrée en multi-tenant (ajout de School, schoolId, extension Prisma).
+Quand on essaie de se connecter (POST /api/auth/login) :
+1. Le frontend affiche "Connexion impossible".
+2. PowerShell renvoie soit 400 (Zod), soit 500 (Internal server error).
+3. Le terminal affiche 429 après plusieurs essais (rate limit).
+
+--- CE QUE J'AI FAIT ---
+J'ai appliqué les migrations (Phase 3) et le code d'isolation (Phase 4).
+Le backend a été redémarré.
+
+===== backend\prisma\schema.prisma =====
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  PARENT
+  STUDENT
+  ACCOUNTANT
+  SUPER_ADMIN
+}
+
+enum SchoolStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+model School {
+  id              Int          @id @default(autoincrement())
+  code            String       @unique
+  name            String
+  status          SchoolStatus @default(TRIAL)
+  plan            String       @default("basic")
+  subscriptionEnd DateTime?    @db.Date
+  currency        String       @default("TND")
+  address         String?
+  phone           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  users               User[]
+  schoolYears         SchoolYear[]
+  teachers            Teacher[]
+  parents             Parent[]
+  students            Student[]
+  studentParents      StudentParent[]
+  classes             SchoolClass[]
+  enrollments         Enrollment[]
+  subjects            Subject[]
+  rooms               Room[]
+  teachingAssignments TeachingAssignment[]
+  auditLogs           AuditLog[]
+  evaluations         Evaluation[]
+  grades              Grade[]
+  absences            Absence[]
+  feeItems            FeeItem[]
+  payments            Payment[]
+  notifications       Notification[]
+  messages            Message[]
+  messageRecipients   MessageRecipient[]
+  messageAttachments  MessageAttachment[]
+  messageAccessLogs   MessageAccessLog[]
+  announcements       Announcement[]
+  pushSubscriptions   PushSubscription[]
+  timetableSlots      TimetableSlot[]
+
+  @@map("schools")
+}
+
+model SchoolYear {
+  id        Int       @id @default(autoincrement())
+  schoolId  Int
+  school    School    @relation(fields: [schoolId], references: [id])
+  label     String
+  startDate DateTime
+  endDate   DateTime
+  isCurrent Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  classes     SchoolClass[]
+  enrollments Enrollment[]
+  students    Student[]
+  absences    Absence[]
+  feeItems    FeeItem[]
+  payments    Payment[]
+
+  @@unique([schoolId, label])
+  @@index([schoolId])
+  @@map("school_years")
+}
+
+model User {
+  id                 Int       @id @default(autoincrement())
+  schoolId           Int?
+  school             School?   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  email              String
+  passwordHash       String
+  role               Role
+  firstName          String
+  lastName           String
+  phone              String?
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  teacher   Teacher?
+  parent    Parent?
+  student   Student?
+  auditLogs AuditLog[]
+
+  absencesRecorded      Absence[]
+  notifications         Notification[]
+  paymentsRecorded      Payment[]          @relation("PaymentRecordedBy")
+  paymentsCancelled     Payment[]          @relation("PaymentCancelledBy")
+  messagesSent          Message[]          @relation("MessageSender")
+  messagesReceived      MessageRecipient[]
+  messageAccessLogs     MessageAccessLog[]
+  announcementsAuthored Announcement[]     @relation("AnnouncementAuthor")
+  pushSubscriptions     PushSubscription[]
+
+  @@unique([schoolId, email])
+  @@index([schoolId])
+  @@map("users")
+}
+
+model Teacher {
+  id         Int       @id @default(autoincrement())
+  schoolId   Int
+  school     School    @relation(fields: [schoolId], references: [id])
+  userId     Int       @unique
+  user       User      @relation(fields: [userId], references: [id])
+  speciality String?
+  hiredAt    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  homeroomClasses SchoolClass[]
+  assignments     TeachingAssignment[]
+  timetableSlots  TimetableSlot[]
+
+  @@index([schoolId])
+  @@map("teachers")
+}
+
+model Parent {
+  id        Int       @id @default(autoincrement())
+  schoolId  Int
+  school    School    @relation(fields: [schoolId], references: [id])
+  userId    Int       @unique
+  user      User      @relation(fields: [userId], references: [id])
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  children StudentParent[]
+
+  @@index([schoolId])
+  @@map("parents")
+}
+
+model Student {
+  id           Int        @id @default(autoincrement())
+  schoolId     Int
+  school       School     @relation(fields: [schoolId], references: [id])
+  userId       Int?       @unique
+  user         User?      @relation(fields: [userId], references: [id])
+  matricule    String
+  firstName    String
+  lastName     String
+  birthDate    DateTime
+  gender       Gender
+  photoUrl     String?
+  medicalNotes String?
+  entryYearId  Int        @map("annee_scolaire_entree_id")
+  entryYear    SchoolYear @relation(fields: [entryYearId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  parents     StudentParent[]
+  enrollments Enrollment[]
+  grades      Grade[]
+  absences    Absence[]
+  payments    Payment[]
+  messages    Message[]
+
+  @@unique([schoolId, matricule])
+  @@index([schoolId])
+  @@map("students")
+}
+
+model StudentParent {
+  schoolId     Int
+  school       School   @relation(fields: [schoolId], references: [id])
+  studentId    Int
+  parentId     Int
+  relationship String
+  student      Student  @relation(fields: [studentId], references: [id])
+  parent       Parent   @relation(fields: [parentId], references: [id])
+
+  @@id([studentId, parentId])
+  @@index([schoolId])
+  @@map("student_parents")
+}
+
+model SchoolClass {
+  id                Int        @id @default(autoincrement())
+  schoolId          Int
+  school            School     @relation(fields: [schoolId], references: [id])
+  level             String
+  section           String
+  capacity          Int
+  schoolYearId      Int        @map("annee_scolaire_id")
+  schoolYear        SchoolYear @relation(fields: [schoolYearId], references: [id])
+  homeroomTeacherId Int?
+  homeroomTeacher   Teacher?   @relation(fields: [homeroomTeacherId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  enrollments    Enrollment[]
+  assignments    TeachingAssignment[]
+  evaluations    Evaluation[]
+  absences       Absence[]
+  timetableSlots TimetableSlot[]
+
+  @@unique([schoolId, level, section, schoolYearId])
+  @@index([schoolId])
+  @@map("classes")
+}
+
+model Enrollment {
+  id           Int         @id @default(autoincrement())
+  schoolId     Int
+  school       School      @relation(fields: [schoolId], references: [id])
+  studentId    Int
+  classId      Int
+  schoolYearId Int         @map("annee_scolaire_id")
+  student      Student     @relation(fields: [studentId], references: [id])
+  schoolClass  SchoolClass @relation(fields: [classId], references: [id])
+  schoolYear   SchoolYear  @relation(fields: [schoolYearId], references: [id])
+  enrolledAt   DateTime    @default(now())
+  deletedAt    DateTime?
+
+  @@unique([studentId, schoolYearId])
+  @@index([schoolId])
+  @@map("enrollments")
+}
+
+model Subject {
+  id          Int       @id @default(autoincrement())
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
+  name        String
+  coefficient Decimal   @db.Decimal(4, 2)
+  level       String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  assignments    TeachingAssignment[]
+  evaluations    Evaluation[]
+  timetableSlots TimetableSlot[]
+
+  @@unique([schoolId, name, level])
+  @@index([schoolId])
+  @@map("subjects")
+}
+
+model Room {
+  id          Int       @id @default(autoincrement())
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
+  name        String
+  capacity    Int
+  isAvailable Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  timetableSlots TimetableSlot[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@map("rooms")
+}
+
+model TeachingAssignment {
+  id          Int         @id @default(autoincrement())
+  schoolId    Int
+  school      School      @relation(fields: [schoolId], references: [id])
+  teacherId   Int
+  subjectId   Int
+  classId     Int
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  deletedAt   DateTime?
+
+  @@unique([teacherId, subjectId, classId])
+  @@index([schoolId])
+  @@map("teaching_assignments")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int
+  school    School   @relation(fields: [schoolId], references: [id])
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  Int?
+  oldValues Json?
+  newValues Json?
+  createdAt DateTime @default(now())
+
+  @@index([schoolId])
+  @@map("audit_logs")
+}
+
+enum Term {
+  T1
+  T2
+  T3
+}
+
+enum EvaluationType {
+  CONTINUOUS
+  EXAM
+}
+
+enum AbsencePeriod {
+  MORNING
+  AFTERNOON
+}
+
+enum JustificationStatus {
+  NONE
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Evaluation {
+  id        Int            @id @default(autoincrement())
+  schoolId  Int
+  school    School         @relation(fields: [schoolId], references: [id])
+  title     String
+  type      EvaluationType
+  term      Term
+  date      DateTime       @db.Date
+  maxScore  Decimal        @default(20) @db.Decimal(5, 2)
+  weight    Decimal        @default(1) @db.Decimal(4, 2)
+  classId   Int
+  subjectId Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  deletedAt DateTime?
+
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  grades      Grade[]
+
+  @@index([classId, subjectId, term])
+  @@index([schoolId])
+  @@map("evaluations")
+}
+
+model Grade {
+  id           Int       @id @default(autoincrement())
+  schoolId     Int
+  school       School    @relation(fields: [schoolId], references: [id])
+  evaluationId Int
+  studentId    Int
+  score        Decimal   @db.Decimal(5, 2)
+  comment      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  student    Student    @relation(fields: [studentId], references: [id])
+
+  @@unique([evaluationId, studentId])
+  @@index([schoolId])
+  @@map("grades")
+}
+
+model Absence {
+  id                  Int                 @id @default(autoincrement())
+  schoolId            Int
+  school              School              @relation(fields: [schoolId], references: [id])
+  studentId           Int
+  classId             Int
+  schoolYearId        Int                 @map("annee_scolaire_id")
+  date                DateTime            @db.Date
+  period              AbsencePeriod
+  justificationStatus JustificationStatus @default(NONE)
+  justificationReason String?
+  reviewNote          String?
+  reviewedAt          DateTime?
+  recordedById        Int?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  deletedAt           DateTime?
+
+  student     Student     @relation(fields: [studentId], references: [id])
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  schoolYear  SchoolYear  @relation(fields: [schoolYearId], references: [id])
+  recordedBy  User?       @relation(fields: [recordedById], references: [id])
+
+  @@unique([studentId, date, period])
+  @@index([classId, date])
+  @@index([schoolId])
+  @@map("absences")
+}
+
+enum FeeType {
+  REGISTRATION
+  TUITION
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model FeeItem {
+  id           Int       @id @default(autoincrement())
+  schoolId     Int
+  school       School    @relation(fields: [schoolId], references: [id])
+  schoolYearId Int       @map("annee_scolaire_id")
+  name         String
+  type         FeeType
+  level        String?
+  amount       Decimal   @db.Decimal(10, 3)
+  dueDate      DateTime  @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  schoolYear SchoolYear @relation(fields: [schoolYearId], references: [id])
+
+  @@index([schoolYearId])
+  @@index([schoolId])
+  @@map("fee_items")
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  schoolId      Int
+  school        School        @relation(fields: [schoolId], references: [id])
+  receiptNumber String
+  studentId     Int
+  schoolYearId  Int           @map("annee_scolaire_id")
+  amount        Decimal       @db.Decimal(10, 3)
+  method        PaymentMethod
+  reference     String?
+  note          String?
+  paidAt        DateTime      @db.Date
+  recordedById  Int?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  cancelledById Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  student     Student    @relation(fields: [studentId], references: [id])
+  schoolYear  SchoolYear @relation(fields: [schoolYearId], references: [id])
+  recordedBy  User?      @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  cancelledBy User?      @relation("PaymentCancelledBy", fields: [cancelledById], references: [id])
+
+  @@unique([schoolId, receiptNumber])
+  @@index([studentId, schoolYearId])
+  @@index([schoolId])
+  @@map("payments")
+}
+
+model Notification {
+  id        Int                 @id @default(autoincrement())
+  schoolId  Int
+  school    School              @relation(fields: [schoolId], references: [id])
+  userId    Int
+  type      String
+  channel   NotificationChannel
+  title     String
+  body      String
+  data      Json?
+  status    NotificationStatus
+  error     String?
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@index([schoolId])
+  @@map("notifications")
+}
+
+enum MessageStatus {
+  DRAFT
+  SENT
+}
+
+enum MessageAccessAction {
+  VIEW_THREAD
+  DOWNLOAD_ATTACHMENT
+}
+
+model Message {
+  id        Int           @id @default(autoincrement())
+  schoolId  Int
+  school    School        @relation(fields: [schoolId], references: [id])
+  threadId  Int?
+  senderId  Int
+  studentId Int?
+  subject   String        @default("")
+  body      String        @default("")
+  important Boolean       @default(false)
+  status    MessageStatus @default(DRAFT)
+  sentAt    DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  sender      User                @relation("MessageSender", fields: [senderId], references: [id])
+  student     Student?            @relation(fields: [studentId], references: [id])
+  thread      Message?            @relation("MessageThread", fields: [threadId], references: [id])
+  replies     Message[]           @relation("MessageThread")
+  recipients  MessageRecipient[]
+  attachments MessageAttachment[]
+
+  @@index([threadId])
+  @@index([senderId, status])
+  @@index([schoolId])
+  @@map("messages")
+}
+
+model MessageRecipient {
+  schoolId  Int
+  school    School    @relation(fields: [schoolId], references: [id])
+  messageId Int
+  userId    Int
+  readAt    DateTime?
+  hiddenAt  DateTime?
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId])
+  @@index([userId, hiddenAt])
+  @@index([schoolId])
+  @@map("message_recipients")
+}
+
+model MessageAttachment {
+  id         Int      @id @default(autoincrement())
+  schoolId   Int
+  school     School   @relation(fields: [schoolId], references: [id])
+  messageId  Int
+  fileName   String
+  mimeType   String
+  size       Int
+  storageKey String   @unique
+  createdAt  DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@map("message_attachments")
+}
+
+model MessageAccessLog {
+  id           Int                 @id @default(autoincrement())
+  schoolId     Int
+  school       School              @relation(fields: [schoolId], references: [id])
+  userId       Int
+  threadId     Int
+  messageId    Int?
+  attachmentId Int?
+  action       MessageAccessAction
+  createdAt    DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([threadId, createdAt])
+  @@index([userId, createdAt])
+  @@index([schoolId])
+  @@map("message_access_logs")
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  schoolId    Int
+  school      School   @relation(fields: [schoolId], references: [id])
+  title       String
+  body        String
+  audience    Role[]
+  correctsId  Int?
+  authorId    Int
+  publishedAt DateTime @default(now())
+
+  author      User           @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  corrects    Announcement?  @relation("AnnouncementCorrection", fields: [correctsId], references: [id])
+  corrections Announcement[] @relation("AnnouncementCorrection")
+
+  @@index([publishedAt])
+  @@index([schoolId])
+  @@map("announcements")
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int
+  school    School   @relation(fields: [schoolId], references: [id])
+  userId    Int
+  endpoint  String
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+  @@index([schoolId])
+  @@map("push_subscriptions")
+}
+
+model TimetableSlot {
+  id          Int       @id @default(autoincrement())
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
+  classId     Int
+  subjectId   Int
+  teacherId   Int
+  roomId      Int?
+  dayOfWeek   DayOfWeek
+  startMinute Int
+  endMinute   Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  room        Room?       @relation(fields: [roomId], references: [id])
+
+  @@index([classId, dayOfWeek])
+  @@index([teacherId, dayOfWeek])
+  @@index([roomId, dayOfWeek])
+  @@index([schoolId])
+  @@map("timetable_slots")
+}
+
+===== backend\src\config\prisma.js =====
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { PrismaClient } from '@prisma/client';
+
+// Per-request tenant context. Populated by `authenticate` (middlewares/auth.js).
+export const schoolContext = new AsyncLocalStorage();
+
+// Models that are NOT tenant-scoped.
+const UNSCOPED_MODELS = new Set(['School']);
+
+// Operations that require a unique `where` and cannot be injected with `schoolId`.
+// We reject them so any callsite that would leak across schools fails loudly.
+const FORBIDDEN_OPS = new Set(['findUnique', 'findUniqueOrThrow', 'upsert']);
+
+// Operations that accept a `where` clause.
+const WHERE_OPS = new Set([
+  'findFirst', 'findFirstOrThrow', 'findMany',
+  'update', 'updateMany', 'delete', 'deleteMany',
+  'aggregate', 'count', 'groupBy',
+]);
+
+const rawClient = new PrismaClient();
+
+export const prisma = rawClient.$extends({
+  name: 'schoolIsolation',
+  query: {
+    $allModels: {
+      async $allOperations({ model, operation, args, query }) {
+        if (!model || UNSCOPED_MODELS.has(model)) {
+          return query(args);
+        }
+
+        if (FORBIDDEN_OPS.has(operation)) {
+          throw new Error(
+            `[tenancy] ${model}.${operation} is forbidden: use findFirst with a school filter ` +
+            `(schoolId is injected automatically by the extension).`,
+          );
+        }
+
+        const ctx = schoolContext.getStore();
+        if (!ctx) {
+          throw new Error(
+            `[tenancy] Refusing ${model}.${operation}: no request context. ` +
+            `Wrap the call in schoolContext.run({ schoolId, ... }, ...) or use platformPrisma.`,
+          );
+        }
+
+        // SUPER_ADMIN has no school: must use platformPrisma for any scoped model.
+        if (ctx.role === 'SUPER_ADMIN' && ctx.schoolId === null) {
+          throw new Error(
+            `[tenancy] SUPER_ADMIN cannot access ${model}.${operation} through the scoped client. ` +
+            `Use platformPrisma for platform-level operations.`,
+          );
+        }
+
+        const schoolId = ctx.schoolId;
+        if (!schoolId) {
+          throw new Error(
+            `[tenancy] Refusing ${model}.${operation}: no schoolId in request context.`,
+          );
+        }
+
+        const scoped = { ...(args ?? {}) };
+
+        if (WHERE_OPS.has(operation)) {
+          scoped.where = { ...(scoped.where ?? {}), schoolId };
+        }
+        if (operation === 'create') {
+          scoped.data = { ...(scoped.data ?? {}), schoolId };
+        }
+        if (operation === 'createMany') {
+          scoped.data = (scoped.data ?? []).map((row) => ({ ...row, schoolId }));
+        }
+
+        return query(scoped);
+      },
+    },
+  },
+});
+
+// Raw client that bypasses tenant isolation. Only for:
+//   - platform login (SUPER_ADMIN)
+//   - changePassword (userId comes from the verified JWT)
+//   - seed scripts
+// Any other use is a bug and must be flagged in code review.
+export const platformPrisma = rawClient;
+
+===== backend\src\middlewares\auth.js =====
+import jwt from 'jsonwebtoken';
+import { prisma, platformPrisma, schoolContext } from '../config/prisma.js';
+import { AppError } from '../utils/AppError.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+
+const buildAuthenticate = ({ allowTemporaryPassword }) =>
+  asyncHandler(async (req, res, next) => {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      throw new AppError('Authentication required', 401);
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
+    } catch {
+      throw new AppError('Invalid or expired token', 401);
+    }
+
+    // We don't know the school yet: use the platform client for this one lookup.
+    const user = await platformPrisma.user.findFirst({
+      where: { id: Number(payload.sub), deletedAt: null, isActive: true },
+      select: {
+        id: true, email: true, role: true, firstName: true, lastName: true,
+        mustChangePassword: true, schoolId: true,
+        school: { select: { status: true } },
+      },
+    });
+    if (!user) throw new AppError('User no longer exists or is disabled', 401);
+
+    // ---- SUPER_ADMIN: no school, no tenant context ----
+    if (user.role === 'SUPER_ADMIN') {
+      if (user.schoolId) throw new AppError('SUPER_ADMIN must not belong to a school', 500);
+      return schoolContext.run(
+        { userId: user.id, role: 'SUPER_ADMIN', schoolId: null },
+        () => {
+          req.user = {
+            id: user.id, email: user.email, role: 'SUPER_ADMIN',
+            firstName: user.firstName, lastName: user.lastName,
+            mustChangePassword: user.mustChangePassword, schoolId: null,
+          };
+          next();
+        },
+      );
+    }
+
+    // ---- Regular users: must have an active school ----
+    if (!user.schoolId) throw new AppError('User has no school', 403);
+    if (!user.school || user.school.status !== 'ACTIVE') {
+      throw new AppError('This school is not active', 403);
+    }
+    if (user.mustChangePassword && !allowTemporaryPassword) {
+      throw new AppError('You must change your temporary password first', 403);
+    }
+
+    return schoolContext.run(
+      { userId: user.id, schoolId: user.schoolId, role: user.role },
+      () => {
+        req.user = {
+          id: user.id, email: user.email, role: user.role,
+          firstName: user.firstName, lastName: user.lastName,
+          mustChangePassword: user.mustChangePassword,
+          schoolId: user.schoolId,
+        };
+        next();
+      },
+    );
+  });
+
+export const authenticate = buildAuthenticate({ allowTemporaryPassword: false });
+export const authenticateAllowingTemporaryPassword = buildAuthenticate({ allowTemporaryPassword: true });
+
+export const authorize = (...roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return next(new AppError('You do not have permission to do this', 403));
+  }
+  next();
+};
+
+===== backend\src\middlewares\validate.js =====
+import { AppError } from '../utils/AppError.js';
+
+export const validate = (schema) => (req, res, next) => {
+  const result = schema.safeParse(req.body);
+  if (!result.success) {
+    const details = result.error.issues.map((i) => ({
+      field: i.path.join('.'),
+      message: i.message,
+    }));
+    return next(new AppError('Validation failed', 400, details));
+  }
+  req.body = result.data;
+  next();
+};
+
+===== backend\src\middlewares\errorHandler.js =====
+import { AppError } from '../utils/AppError.js';
+
+export const notFound = (req, res, next) => {
+  next(new AppError(`Route not found: ${req.method} ${req.originalUrl}`, 404));
+};
+
+// Translates common Prisma errors into readable responses
+const fromPrisma = (err) => {
+  if (err?.name !== 'PrismaClientKnownRequestError') return null;
+  switch (err.code) {
+    case 'P2002':
+      return new AppError('A record with the same unique values already exists (it may be archived)', 409);
+    case 'P2003':
+      return new AppError('A referenced record does not exist', 400);
+    case 'P2025':
+      return new AppError('Record not found', 404);
+    default:
+      return null;
+  }
+};
+    
+// Translates upload errors (file too large, etc.)
+const fromMulter = (err) =>
+  err?.name === 'MulterError'
+    ? new AppError(err.code === 'LIMIT_FILE_SIZE' ? 'File too large' : err.message, 400)
+    : null;
+
+export const errorHandler = (err, req, res, next) => {
+  const error = fromMulter(err) || fromPrisma(err) || err;
+  const statusCode = error.statusCode || 500;
+
+  if (statusCode === 500) console.error(err);
+
+  res.status(statusCode).json({
+    status: 'error',
+    message: statusCode === 500 ? 'Internal server error' : error.message,
+    ...(error.details && { details: error.details }),
+  });
+};
+
+===== backend\src\services\auth.service.js =====
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { prisma, platformPrisma } from '../config/prisma.js';
+import { AppError } from '../utils/AppError.js';
+
+const signToken = (user) =>
+  jwt.sign({ sub: String(user.id), role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+  });
+
+// School user login. Same error message for unknown school / email / password.
+export const login = async (schoolCode, email, password) => {
+  const school = await platformPrisma.school.findFirst({
+    where: { code: schoolCode },
+    select: { id: true, status: true, name: true, currency: true },
+  });
+  
+  const fail = () => new AppError('Invalid credentials', 401);
+  if (!school || school.status !== 'ACTIVE') throw fail();
+
+  // On utilise platformPrisma pour chercher l'utilisateur avec son schoolId
+  const user = await platformPrisma.user.findFirst({
+    where: { email: email.toLowerCase(), schoolId: school.id, deletedAt: null },
+  });
+
+  if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw fail();
+  }
+
+  const { passwordHash, ...safeUser } = user;
+  return {
+    token: signToken(user),
+    user: safeUser,
+    school: { id: school.id, code: schoolCode, name: school.name, currency: school.currency },
+  };
+};
+
+export const platformLogin = async (email, password) => {
+  const user = await platformPrisma.user.findFirst({
+    where: { email: email.toLowerCase(), role: 'SUPER_ADMIN', deletedAt: null },
+  });
+  if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw new AppError('Invalid credentials', 401);
+  }
+  const { passwordHash, ...safeUser } = user;
+  return { token: signToken(user), user: safeUser };
+};
+
+export const changePassword = async (userId, currentPassword, newPassword) => {
+  const user = await platformPrisma.user.findFirst({ where: { id: userId, deletedAt: null } });
+  if (!user) throw new AppError('User not found', 401);
+  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    throw new AppError('Current password is incorrect', 400);
+  }
+  await platformPrisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash: await bcrypt.hash(newPassword, 10),
+      mustChangePassword: false,
+    },
+  });
+};
+
+===== backend\src\routes\auth.routes.js =====
+import { Router } from 'express';
+import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
+import * as controller from '../controllers/auth.controller.js';
+import { validate } from '../middlewares/validate.js';
+import {
+  authenticate,
+  authenticateAllowingTemporaryPassword,
+  authorize,
+} from '../middlewares/auth.js';
+
+const router = Router();
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  message: { status: 'error', message: 'Too many login attempts, try again later' },
+});
+
+const platformLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  message: { status: 'error', message: 'Too many login attempts, try again later' },
+});
+
+// On accepte n'importe quel format d'email pour le local (.local)
+const loginSchema = z.object({
+  schoolCode: z.string().trim().min(1),
+  email: z.string().trim().min(1),
+  password: z.string().min(1),
+});
+
+const platformLoginSchema = z.object({
+  email: z.string().trim().min(1),
+  password: z.string().min(1),
+});
+
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z
+    .string()
+    .min(8, 'At least 8 characters')
+    .regex(/[A-Z]/, 'At least one uppercase letter')
+    .regex(/[0-9]/, 'At least one number'),
+});
+
+router.post('/login', loginLimiter, validate(loginSchema), controller.login);
+router.post('/platform/login', platformLimiter, validate(platformLoginSchema), controller.platformLogin);
+router.get('/me', authenticateAllowingTemporaryPassword, controller.me);
+router.patch('/password', authenticateAllowingTemporaryPassword, validate(passwordSchema), controller.changePassword);
+
+export default router;
+
+===== backend\src\controllers\auth.controller.js =====
+import { asyncHandler } from '../utils/asyncHandler.js';
+import * as authService from '../services/auth.service.js';
+
+export const login = asyncHandler(async (req, res) => {
+  const { schoolCode, email, password } = req.body;
+  const result = await authService.login(schoolCode, email, password);
+  res.json({ status: 'success', ...result });
+});
+
+export const platformLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const result = await authService.platformLogin(email, password);
+  res.json({ status: 'success', ...result });
+});
+
+export const me = asyncHandler(async (req, res) => {
+  res.json({ status: 'success', user: req.user });
+});
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  await authService.changePassword(req.user.id, currentPassword, newPassword);
+  res.json({ status: 'success', message: 'Password updated' });
+});
+
+===== frontend\src\features\auth\LoginPage.jsx =====
+import { useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import Button from '../../components/ui/Button.jsx';
+import TextField from '../../components/ui/TextField.jsx';
+import Alert from '../../components/ui/Alert.jsx';
+import { homeFor } from '../../app/roleHome.js';
+import { useAuth } from './useAuth.js';
+
+const schema = z.object({
+  schoolCode: z.string().trim().min(1, 'Saisis le code de ton école.'),
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Saisis ton adresse e-mail.')
+    .email('Cette adresse e-mail n’est pas valide.').or(z.string().endsWith('.local')),
+  password: z.string().min(1, 'Saisis ton mot de passe.'),
+});
+
+const messageFor = (err) => {
+  if (err.status === 0) return err.message;
+  if (err.status === 401) return 'Code école, adresse e-mail ou mot de passe incorrect.';
+  if (err.status === 403) return 'Ce compte est désactivé ou l’école est suspendue. Contacte l’administration.';
+  return 'Connexion impossible pour le moment. Réessaie dans un instant.';
+};
+
+const features = [
+  { label: 'Notes et bulletins', dot: 'bg-sun' },
+  { label: 'Absences', dot: 'bg-coral' },
+  { label: 'Emploi du temps', dot: 'bg-meadow' },
+  { label: 'Paiements', dot: 'bg-sky' },
+  { label: 'Messages', dot: 'bg-grape' },
+];
+
+export default function LoginPage() {
+  const { user, status, login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [serverError, setServerError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({ 
+    resolver: zodResolver(schema), 
+    defaultValues: { 
+      schoolCode: localStorage.getItem('lastSchoolCode') || 'ali-slimen', 
+      email: '', 
+      password: '' 
+    } 
+  });
+
+  const onSubmit = async ({ schoolCode, email, password }) => {
+    setServerError(null);
+    try {
+      const loggedIn = await login(schoolCode, email, password);
+      localStorage.setItem('lastSchoolCode', schoolCode);
+      navigate(location.state?.from ?? homeFor(loggedIn.role), { replace: true });
+    } catch (err) {
+      setServerError(messageFor(err));
+    }
+  };
+
+  if (status === 'authenticated') return <Navigate to={homeFor(user.role)} replace />;
+
+  return (
+    <div className="grid min-h-dvh lg:grid-cols-2">
+      <aside className="hidden bg-sky p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <p className="font-display text-2xl font-semibold">NextEducation</p>
+        <div>
+          <p className="font-display text-5xl font-semibold leading-tight">
+            Toute l’école au même endroit.
+          </p>
+          <ul className="mt-8 flex flex-wrap gap-3 text-ink">
+            {features.map((f) => (
+              <li key={f.label} className="flex items-center gap-2 rounded-full bg-paper px-4 py-2 font-bold">
+                <span className={`size-3 rounded-full ${f.dot}`} aria-hidden="true" />
+                {f.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <span aria-hidden="true" />
+      </aside>
+
+      <main className="flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <p className="font-display text-2xl font-semibold text-sky lg:hidden">NextEducation</p>
+          <h1 className="mt-6 text-4xl font-semibold lg:mt-0">Bienvenue</h1>
+          <p className="mt-2 text-lg">Connecte-toi avec l’adresse e-mail donnée par l’école.</p>
+
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
+            {serverError && <Alert tone="danger">{serverError}</Alert>}
+
+            <TextField
+              label="Code de l'école"
+              type="text"
+              placeholder="ex: ali-slimen"
+              error={errors.schoolCode?.message}
+              {...register('schoolCode')}
+            />
+
+            <TextField
+              label="Adresse e-mail"
+              type="email"
+              inputMode="email"
+              autoComplete="username"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+            <TextField
+              label="Mot de passe"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+
+            <label className="flex min-h-11 items-center gap-2">
+              <input
+                type="checkbox"
+                className="size-5 accent-sky"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+              />
+              Afficher le mot de passe
+            </label>
+
+            <Button type="submit" loading={isSubmitting} className="w-full">
+              Se connecter
+            </Button>
+          </form>
+
+          <p className="mt-6 text-sm text-ink/70">
+            Mot de passe oublié ? Contacte l’administration de l’école.
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+===== frontend\src\features\auth\AuthContext.jsx =====
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import { api, setSessionExpiredHandler, tokenStore } from '../../api/client.js';
+import { queryClient } from '../../app/queryClient.js';
+
+export const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [status, setStatus] = useState(() => (tokenStore.get() ? 'loading' : 'anonymous'));
+
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      setUser(null);
+      setStatus('anonymous');
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!tokenStore.get()) return undefined;
+    const controller = new AbortController();
+
+    api('/auth/me', { signal: controller.signal })
+      .then((data) => {
+        setUser(data.user);
+        setStatus('authenticated');
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        setUser(null);
+        setStatus('anonymous');
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const login = useCallback(async (schoolCode, email, password) => {
+    const data = await api('/auth/login', { method: 'POST', body: { schoolCode, email, password } });
+    tokenStore.set(data.token);
+    setUser(data.user);
+    setStatus('authenticated');
+    return data.user;
+  }, []);
+
+  const logout = useCallback(() => {
+    tokenStore.clear();
+    queryClient.clear();
+    setUser(null);
+    setStatus('anonymous');
+  }, []);
+
+  const markPasswordChanged = useCallback(() => {
+    setUser((current) => (current ? { ...current, mustChangePassword: false } : current));
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, status, login, logout, markPasswordChanged }),
+    [user, status, login, logout, markPasswordChanged],
+  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

@@ -18,6 +18,11 @@ export default function ProtectedRoute({ roles }) {
     return <Navigate to={PASSWORD_PATH} replace />;
   }
 
+  // Le SUPER_ADMIN n'entre jamais dans l'interface d'une ecole
+  if (user.role === 'SUPER_ADMIN' && location.pathname !== PASSWORD_PATH && !roles?.includes('SUPER_ADMIN')) {
+    return <Navigate to="/plateforme" replace />;
+  }
+
   if (roles && !roles.includes(user.role)) return <Navigate to={homeFor(user.role)} replace />;
   return <Outlet />;
 }

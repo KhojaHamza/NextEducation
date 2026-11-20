@@ -126,7 +126,7 @@ export const saveMessage = async (user, input) => {
       await logAudit(tx, {
         userId: user.id, action: 'CREATE', entity: 'Message', entityId: message.id, newValues: auditMeta(message, unique),
       });
-      return { message, draft: true };
+      return { message: fullMessage, draft: true };
     }
 
     if (!unique.length) throw new AppError('At least one recipient is required', 400);
@@ -143,7 +143,7 @@ export const saveMessage = async (user, input) => {
     await logAudit(tx, {
       userId: user.id, action: 'CREATE', entity: 'Message', entityId: message.id, newValues: auditMeta(message, unique),
     });
-    return { message, recipients, content, draft: false };
+    return { message: fullMessage, recipients, content, draft: false };
   });
 
   if (!result.draft) dispatch(result.recipients, result.content, result.message);
@@ -168,7 +168,7 @@ export const sendDraft = async (user, id) => {
     });
     if (claimed.count === 0) throw new AppError('This message was already sent', 409);
 
-    const message = await tx.message.findUnique({ where: { id }, include: messageInclude });
+    const message = await tx.message.findFirst({ where: { id }, include: messageInclude });
     const content = await notifyInApp(tx, user, message, recipients);
     await logAudit(tx, {
       userId: user.id, action: 'UPDATE', entity: 'Message', entityId: id, newValues: auditMeta(message, ids),

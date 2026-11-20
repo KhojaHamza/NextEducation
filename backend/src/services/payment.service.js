@@ -14,7 +14,11 @@ export const paymentInclude = {
 
 // Serializes every payment write: no overpayment race, no duplicate receipt numbers.
 // (pg_advisory_xact_lock returns "void", which Prisma can only run through $executeRaw.)
-const lockPayments = (tx) => tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(7001)');
+import { schoolContext } from '../config/prisma.js';
+const lockPayments = (tx) => {
+  const schoolId = schoolContext.getStore()?.schoolId || 1;
+  return tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(7001, ${schoolId})`);
+};
 
 const startOfTodayUtc = () => {
   const d = new Date();
@@ -23,7 +27,7 @@ const startOfTodayUtc = () => {
 };
 
 const findPayment = async (db, id) => {
-  const payment = await db.payment.findUnique({ where: { id }, include: paymentInclude });
+  const payment = await db.payment.findFirst({ where: { id }, include: paymentInclude });
   if (!payment) throw new AppError('Payment not found', 404);
   return payment;
 };
@@ -150,7 +154,7 @@ export const cancelPayment = (id, reason, userId) =>
   });
 
 export const getReceiptData = async (id) => {
-  const payment = await prisma.payment.findUnique({
+  const payment = await prisma.payment.findFirst({
     where: { id }, include: { student: true, schoolYear: true },
   });
   if (!payment) throw new AppError('Payment not found', 404);
