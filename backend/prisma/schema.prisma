@@ -76,6 +76,9 @@ model School {
   pushSubscriptions   PushSubscription[]
   timetableSlots      TimetableSlot[]
 
+  homeworks   Homework[]
+  schoolEvents SchoolEvent[]
+
   @@map("schools")
 }
 
@@ -136,6 +139,8 @@ model User {
 
   @@unique([schoolId, email])
   @@index([schoolId])
+  homeworksAuthored Homework[] @relation("HomeworkAuthor")
+
   @@map("users")
 }
 
@@ -244,6 +249,8 @@ model SchoolClass {
 
   @@unique([schoolId, level, section, schoolYearId])
   @@index([schoolId])
+  homeworks Homework[]
+
   @@map("classes")
 }
 
@@ -282,6 +289,8 @@ model Subject {
 
   @@unique([schoolId, name, level])
   @@index([schoolId])
+  homeworks Homework[]
+
   @@map("subjects")
 }
 
@@ -702,4 +711,43 @@ model PlatformAuditLog {
   @@index([targetSchoolId])
   @@index([createdAt])
   @@map("platform_audit_logs")
+}
+model Homework {
+  id          Int       @id @default(autoincrement())
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
+  classId     Int
+  subjectId   Int
+  authorId    Int
+  title       String
+  description String
+  dueDate     DateTime  @db.Date
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  schoolClass SchoolClass @relation(fields: [classId], references: [id])
+  subject     Subject     @relation(fields: [subjectId], references: [id])
+  author      User        @relation("HomeworkAuthor", fields: [authorId], references: [id])
+
+  @@index([classId, dueDate])
+  @@index([schoolId])
+  @@map("homeworks")
+}
+
+model SchoolEvent {
+  id          Int       @id @default(autoincrement())
+  schoolId    Int
+  school      School    @relation(fields: [schoolId], references: [id])
+  title       String
+  description String?
+  date        DateTime  @db.Date
+  endDate     DateTime? @db.Date
+  createdById Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([schoolId, date])
+  @@map("school_events")
 }
