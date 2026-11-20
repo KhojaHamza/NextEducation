@@ -35,6 +35,10 @@ import platformRoutes from './routes/platform.routes.js';
 import timetableRoutes from './modules/timetable.module.js';
 import dashboardRoutes from './modules/dashboard.module.js';
 
+import homeworksRoutes from './modules/homeworks.module.js';
+import schoolEventsRoutes from './modules/schoolEvents.module.js';
+import calendarRoutes from './modules/calendar.module.js';
+
 const app = express();
 
 // AJOUT 1 : derrière Railway/Render, il y a un proxy. Sans cette ligne,
@@ -87,6 +91,10 @@ app.use('/api/platform', platformRoutes);
 
 app.use('/api/timetable', timetableRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+
+app.use('/api/homeworks', homeworksRoutes);
+app.use('/api/school-events', schoolEventsRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // AJOUT 4 : Express sert le frontend compilé (frontend/dist), s'il existe.
 // Ce bloc doit rester APRÈS les routes /api et AVANT notFound.
