@@ -74,7 +74,7 @@ router.post('/', authorize('ADMIN'), validate(createSchema), asyncHandler(async 
 
   const result = await prisma.$transaction(async (tx) => {
     if (correctsId) {
-      const original = await tx.announcement.findUnique({ where: { id: correctsId } });
+      const original = await tx.announcement.findFirst({ where: { id: correctsId } });
       if (!original) throw new AppError('The announcement to correct does not exist', 400);
     }
 

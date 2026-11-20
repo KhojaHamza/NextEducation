@@ -30,6 +30,7 @@ import usersRoutes from './modules/users.module.js';
 import messagesRoutes from './modules/messages.module.js';
 import announcementsRoutes from './modules/announcements.module.js';
 import pushRoutes from './routes/push.routes.js';
+import platformRoutes from './routes/platform.routes.js';
 
 import timetableRoutes from './modules/timetable.module.js';
 
@@ -81,6 +82,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/platform', platformRoutes);
 
 app.use('/api/timetable', timetableRoutes);
 

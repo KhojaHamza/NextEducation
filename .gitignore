@@ -8,3 +8,8 @@ coverage/
 .DS_Store
 *.logbackend/*.pdf
 uploads
+backups/
+
+.env
+*.dump
+node_modules/

@@ -84,7 +84,7 @@ export const createPersonRouter = ({
       const userData = pick(req.body, userKeys);
 
       if (userData.email && userData.email !== before.user.email) {
-        const taken = await tx.user.findUnique({ where: { email: userData.email } });
+        const taken = await tx.user.findFirst({ where: { email: userData.email } });
         if (taken) throw new AppError('This email is already used', 409);
       }
       if (Object.keys(userData).length) {

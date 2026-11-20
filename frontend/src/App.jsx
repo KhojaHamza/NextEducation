@@ -11,6 +11,8 @@ import AssignmentsPage from './features/assignments/AssignmentsPage.jsx';
 import AuditLogsPage from './features/auditLogs/AuditLogsPage.jsx';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
+import PlatformDashboard from './features/platform/PlatformDashboard.jsx';
+import PlatformLoginPage from './features/platform/PlatformLoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
 import AccountantHome from './features/dashboard/AccountantHome.jsx';
@@ -59,6 +61,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/connexion" element={<LoginPage />} />
+      <Route path="/e/:schoolCode/connexion" element={<LoginPage />} />
+      <Route path="/plateforme/connexion" element={<PlatformLoginPage />} />
+      <Route path="/plateforme" element={<PlatformDashboard />} />
       <Route path="/design" element={<DesignPreview />} />
 
       <Route element={<ProtectedRoute />}>

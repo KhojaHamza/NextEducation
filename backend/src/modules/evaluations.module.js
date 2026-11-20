@@ -45,7 +45,7 @@ const findEvaluation = async (db, id) => {
 };
 
 const assertDateInYear = async (db, schoolYearId, date) => {
-  const year = await db.schoolYear.findUnique({ where: { id: schoolYearId } });
+  const year = await db.schoolYear.findFirst({ where: { id: schoolYearId } });
   if (date < year.startDate || date > year.endDate) {
     throw new AppError(`Date must be within the school year ${year.label}`, 400);
   }
@@ -201,8 +201,8 @@ router.put('/:id/grades', authorize(...roles), validate(gradesSchema), asyncHand
 
     const counts = { created: 0, updated: 0, deleted: 0, unchanged: 0 };
     for (const g of grades) {
-      const existing = await tx.grade.findUnique({
-        where: { evaluationId_studentId: { evaluationId: id, studentId: g.studentId } },
+      const existing = await tx.grade.findFirst({
+        where: { evaluationId: id, studentId: g.studentId },
       });
       const active = existing && !existing.deletedAt ? existing : null;
 
