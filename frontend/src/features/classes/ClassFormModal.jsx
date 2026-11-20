@@ -93,7 +93,7 @@ function ClassForm({ record, years, teachers, onClose }) {
       <div className="grid gap-5 sm:grid-cols-2">
         <TextField
           label="Niveau"
-          hint="Par exemple CP, CE1, CE2."
+          hint="Par exemple CP,1,2,3."
           autoComplete="off"
           error={errors.level?.message}
           {...register('level')}
