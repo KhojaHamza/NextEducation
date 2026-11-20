@@ -9,3 +9,7 @@ coverage/
 *.logbackend/*.pdf
 uploads
 backups/
+
+.env
+*.dump
+node_modules/
