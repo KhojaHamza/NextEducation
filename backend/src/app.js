@@ -33,6 +33,7 @@ import pushRoutes from './routes/push.routes.js';
 import platformRoutes from './routes/platform.routes.js';
 
 import timetableRoutes from './modules/timetable.module.js';
+import dashboardRoutes from './modules/dashboard.module.js';
 
 const app = express();
 
@@ -85,6 +86,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/platform', platformRoutes);
 
 app.use('/api/timetable', timetableRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // AJOUT 4 : Express sert le frontend compilé (frontend/dist), s'il existe.
 // Ce bloc doit rester APRÈS les routes /api et AVANT notFound.

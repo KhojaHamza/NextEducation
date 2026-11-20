@@ -15,6 +15,7 @@ import PlatformDashboard from './features/platform/PlatformDashboard.jsx';
 import PlatformLoginPage from './features/platform/PlatformLoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
+import PedagogyDashboard from './features/dashboard/PedagogyDashboard.jsx';
 import AccountantHome from './features/dashboard/AccountantHome.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
 import ParentHome from './features/dashboard/ParentHome.jsx';
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="/admin/evaluations" element={<EvaluationsPage />} />
           <Route path="/admin/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/admin/resultats" element={<ResultsPage />} />
+          <Route path="/admin/tableau-pedagogique" element={<PedagogyDashboard />} />
           <Route path="/admin/bulletins/:studentId" element={<ReportCardPage />} />
           <Route path="/admin/paiements" element={<PaymentsPage />} />
           <Route path="/admin/impayes" element={<OverduePage />} />
