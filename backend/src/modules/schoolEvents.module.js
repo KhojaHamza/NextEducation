@@ -6,6 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import { logAudit } from '../core/audit.service.js';
+import { notifyUsers } from '../services/notify.service.js';
 
 const createSchema = z
   .object({
@@ -33,6 +34,24 @@ router.post('/', authorize('ADMIN'), validate(createSchema), asyncHandler(async 
     });
     return created;
   });
+  // Everyone in the school is told; a failure here must not undo the event
+  try {
+    const users = await prisma.user.findMany({
+      where: { isActive: true, deletedAt: null, id: { not: req.user.id } },
+      select: { id: true, email: true },
+    });
+    const when = record.date.toISOString().slice(0, 10).split('-').reverse().join('/');
+    await notifyUsers(prisma, users, {
+      type: 'SCHOOL_EVENT',
+      title: `Nouvel événement : ${record.title}`,
+      body: `Le ${when}${record.description ? ` - ${record.description.slice(0, 200)}` : ''}`,
+      data: { eventId: record.id },
+      link: `${process.env.CLIENT_URL || ''}/calendrier`,
+    });
+  } catch (err) {
+    console.error('[events] notification failed', err);
+  }
+
   res.status(201).json({ status: 'success', data: record });
 }));
 
