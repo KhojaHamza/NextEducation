@@ -11,6 +11,7 @@ import { getTeacherClassIds } from '../services/access.service.js';
 import { prisma } from '../config/prisma.js';
 import { logAudit } from '../core/audit.service.js';
 import { createUserAccount } from '../services/userAccount.service.js';
+import { MIN_STUDENT_AGE, isOldEnough } from '../utils/age.js';
 const parentLink = z.object({
   parentId: z.number().int().positive(),
   relationship: z.enum(['father', 'mother', 'guardian']),
@@ -19,7 +20,9 @@ const parentLink = z.object({
 const fields = {
   firstName: z.string().trim().min(1).max(60),
   lastName: z.string().trim().min(1).max(60),
-  birthDate: z.coerce.date().refine((d) => d < new Date(), 'Birth date must be in the past'),
+  birthDate: z.coerce.date()
+    .refine((d) => d < new Date(), 'Birth date must be in the past')
+    .refine((d) => isOldEnough(d), `Student must be at least ${MIN_STUDENT_AGE} years old`),
   gender: z.enum(['MALE', 'FEMALE']),
   medicalNotes: z.string().trim().max(1000).optional(),
 };
