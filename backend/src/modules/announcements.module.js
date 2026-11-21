@@ -93,7 +93,7 @@ router.post('/', authorize('ADMIN'), validate(createSchema), asyncHandler(async 
       title: `${correctsId ? 'Correction' : 'Annonce'} : ${title}`,
       body: body.length > 300 ? `${body.slice(0, 297)}...` : body,
       data: { announcementId: announcement.id },
-      link: `${process.env.CLIENT_URL || ''}/announcements/${announcement.id}`,
+      link: `${process.env.CLIENT_URL || ''}/annonces`,
     };
     const now = new Date();
     await tx.notification.createMany({

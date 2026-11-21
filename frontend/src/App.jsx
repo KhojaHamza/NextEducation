@@ -9,12 +9,14 @@ import RollCallPage from './features/absences/RollCallPage.jsx';
 import AnnouncementsPage from './features/announcements/AnnouncementsPage.jsx';
 import AssignmentsPage from './features/assignments/AssignmentsPage.jsx';
 import AuditLogsPage from './features/auditLogs/AuditLogsPage.jsx';
+import CalendarPage from './features/calendar/CalendarPage.jsx';
 import ChangePasswordPage from './features/auth/ChangePasswordPage.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import PlatformDashboard from './features/platform/PlatformDashboard.jsx';
 import PlatformLoginPage from './features/platform/PlatformLoginPage.jsx';
 import ClassesPage from './features/classes/ClassesPage.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
+import PedagogyDashboard from './features/dashboard/PedagogyDashboard.jsx';
 import AccountantHome from './features/dashboard/AccountantHome.jsx';
 import DashboardPlaceholder from './features/dashboard/DashboardPlaceholder.jsx';
 import ParentHome from './features/dashboard/ParentHome.jsx';
@@ -23,6 +25,7 @@ import TeacherHome from './features/dashboard/TeacherHome.jsx';
 import DesignPreview from './features/dev/DesignPreview.jsx';
 import EvaluationsPage from './features/evaluations/EvaluationsPage.jsx';
 import GradeEntryPage from './features/evaluations/GradeEntryPage.jsx';
+import HomeworksPage from './features/homeworks/HomeworksPage.jsx';
 import FeesPage from './features/fees/FeesPage.jsx';
 import MessagesPage from './features/messages/MessagesPage.jsx';
 import ThreadPage from './features/messages/ThreadPage.jsx';
@@ -83,6 +86,8 @@ export default function App() {
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:threadId" element={<ThreadPage />} />
           <Route path="/annonces" element={<AnnouncementsPage />} />
+          <Route path="/devoirs" element={<HomeworksPage />} />
+          <Route path="/calendrier" element={<CalendarPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
@@ -105,6 +110,7 @@ export default function App() {
           <Route path="/admin/evaluations" element={<EvaluationsPage />} />
           <Route path="/admin/evaluations/:id/notes" element={<GradeEntryPage />} />
           <Route path="/admin/resultats" element={<ResultsPage />} />
+          <Route path="/admin/tableau-pedagogique" element={<PedagogyDashboard />} />
           <Route path="/admin/bulletins/:studentId" element={<ReportCardPage />} />
           <Route path="/admin/paiements" element={<PaymentsPage />} />
           <Route path="/admin/impayes" element={<OverduePage />} />
