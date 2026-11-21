@@ -21,7 +21,7 @@ const sendSchema = z
   .object({
     subject: z.string().trim().min(1).max(150).optional(),
     body: z.string().trim().min(1).max(5000),
-    recipientIds: z.array(positiveId).min(1).max(50).optional(),
+    recipientIds: z.array(positiveId).min(1).max(200).optional(),
     studentId: positiveId.optional(),
     important: z.boolean().optional(),
     replyToId: positiveId.optional(),
@@ -37,7 +37,7 @@ const sendSchema = z
 const draftSchema = z.object({
   subject: z.string().trim().max(150).optional(),
   body: z.string().trim().max(5000).optional(),
-  recipientIds: z.array(positiveId).max(50).optional(),
+  recipientIds: z.array(positiveId).max(200).optional(),
   studentId: positiveId.optional(),
   important: z.boolean().optional(),
   replyToId: positiveId.optional(),
@@ -48,7 +48,7 @@ const updateSchema = z
   .object({
     subject: z.string().trim().max(150),
     body: z.string().trim().max(5000),
-    recipientIds: z.array(positiveId).max(50),
+    recipientIds: z.array(positiveId).max(200),
     studentId: positiveId.nullable(),
     important: z.boolean(),
   })
