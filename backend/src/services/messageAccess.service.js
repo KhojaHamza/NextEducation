@@ -2,8 +2,41 @@ import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { assertParentOfStudent, getTeacherClassIds } from './access.service.js';
 
-// The administration side of the school: it can talk to parents and students
+// =====================================================================
+//  RULES: edit these two tables to change who may write to whom
+// =====================================================================
+
+// Individual people a role may write to
+export const ROLE_TARGETS = {
+  ADMIN: ['STUDENT', 'PARENT', 'TEACHER', 'ACCOUNTANT'],
+  PARENT: ['ADMIN', 'TEACHER', 'STUDENT', 'ACCOUNTANT'],
+  STUDENT: ['ADMIN', 'TEACHER', 'PARENT'],
+  ACCOUNTANT: ['ADMIN', 'TEACHER', 'PARENT'],
+  TEACHER: ['ADMIN', 'STUDENT', 'PARENT'],
+};
+
+// Groups a role may write to
+//   CLASS = the students of one class, ALL_TEACHERS, ALL_PARENTS, EVERYONE
+export const GROUPS = {
+  ADMIN: ['CLASS', 'ALL_TEACHERS', 'EVERYONE'],
+  PARENT: [],
+  STUDENT: ['CLASS'],
+  ACCOUNTANT: ['ALL_PARENTS', 'EVERYONE'],
+  TEACHER: ['CLASS', 'ALL_PARENTS', 'EVERYONE'],
+};
+
+// "Everyone": the administration reaches the students too, the others only the adults
+const EVERYONE_ROLES = {
+  ADMIN: ['ADMIN', 'TEACHER', 'PARENT', 'ACCOUNTANT', 'STUDENT'],
+  default: ['ADMIN', 'TEACHER', 'PARENT', 'ACCOUNTANT'],
+};
+
+const MAX_AUDIENCE = 1000;
+
+// Kept for other modules that may import it
 export const ADMIN_SIDE = ['ADMIN', 'ACCOUNTANT'];
+
+// =====================================================================
 
 const userBrief = { id: true, role: true, email: true, firstName: true, lastName: true };
 const activeUser = { deletedAt: null, isActive: true };
@@ -24,158 +57,162 @@ const userTeachesStudent = async (db, teacherUserId, studentId) => {
   return studentClasses.some((c) => teacherClasses.includes(c));
 };
 
-// Single source of truth for the channel rules. Returns the recipients' user records.
+// Per recipient role: the extra Prisma filter that limits WHO of that role the sender may reach
+const scopeFilters = async (db, sender) => {
+  if (['ADMIN', 'ACCOUNTANT'].includes(sender.role)) return {};
+
+  if (sender.role === 'TEACHER') {
+    const classIds = await getTeacherClassIds(sender.id);
+    const inMyClasses = { deletedAt: null, enrollments: { some: { classId: { in: classIds }, deletedAt: null } } };
+    return {
+      STUDENT: { student: inMyClasses },
+      PARENT: { parent: { deletedAt: null, children: { some: { student: inMyClasses } } } },
+    };
+  }
+
+  // PARENT and STUDENT: "mine" = my children (parent) or my own student record (student)
+  const mine = sender.role === 'PARENT'
+    ? { parents: { some: { parent: { userId: sender.id, deletedAt: null } } } }
+    : { userId: sender.id };
+  const enrollments = await db.enrollment.findMany({
+    where: { deletedAt: null, student: { deletedAt: null, ...mine } }, select: { classId: true },
+  });
+  const classIds = [...new Set(enrollments.map((e) => e.classId))];
+
+  const filters = {
+    TEACHER: {
+      teacher: {
+        deletedAt: null,
+        OR: [
+          { homeroomClasses: { some: { id: { in: classIds }, deletedAt: null } } },
+          { assignments: { some: { classId: { in: classIds }, deletedAt: null } } },
+        ],
+      },
+    },
+  };
+  if (sender.role === 'PARENT') filters.STUDENT = { student: mine };
+  else filters.PARENT = { parent: { deletedAt: null, children: { some: { student: mine } } } };
+  return filters;
+};
+
+const recipientWhere = (roles, filters) => roles.map((role) => ({ role, ...(filters[role] ?? {}) }));
+
+export const loadRecipients = async (db, ids) => {
+  const wanted = [...new Set(ids)];
+  const recipients = await db.user.findMany({ where: { id: { in: wanted }, ...activeUser }, select: userBrief });
+  if (recipients.length !== wanted.length) throw new AppError('One or more recipients do not exist', 400);
+  return recipients;
+};
+
+// Individual recipients. Returns their user records.
 export const assertCanMessage = async (db, sender, recipientIds, studentId) => {
   const wanted = [...new Set(recipientIds)];
   if (wanted.includes(sender.id)) throw new AppError('You cannot message yourself', 400);
 
-  const recipients = await db.user.findMany({ where: { id: { in: wanted }, ...activeUser }, select: userBrief });
-  if (recipients.length !== wanted.length) throw new AppError('One or more recipients do not exist', 400);
-  const roles = recipients.map((r) => r.role);
+  const recipients = await loadRecipients(db, wanted);
+  const allowed = ROLE_TARGETS[sender.role] ?? [];
+  if (recipients.some((r) => !allowed.includes(r.role))) throw forbidden();
 
-  switch (sender.role) {
-    case 'ADMIN':
-    case 'ACCOUNTANT': {
-      if (roles.some((r) => !['PARENT', 'STUDENT'].includes(r))) throw forbidden();
-      if (studentId) {
-        const student = await db.student.findFirst({ where: { id: studentId, deletedAt: null } });
-        if (!student) throw new AppError('Student not found', 400);
-      }
-      break;
-    }
-    case 'STUDENT': {
-      if (roles.some((r) => !ADMIN_SIDE.includes(r))) throw forbidden();
-      break;
-    }
-    case 'TEACHER': {
-      if (!studentId) throw new AppError('studentId is required when a teacher writes to parents', 400);
-      if (roles.some((r) => r !== 'PARENT')) throw forbidden();
+  const filters = await scopeFilters(db, sender);
+  const ok = await db.user.count({
+    where: { id: { in: wanted }, ...activeUser, OR: recipientWhere(allowed, filters) },
+  });
+  if (ok !== wanted.length) {
+    throw forbidden('You can only write to people connected to you (your classes, children or teachers)');
+  }
+
+  if (studentId) {
+    if (sender.role === 'PARENT') {
+      await assertParentOfStudent(sender.id, studentId);
+    } else if (sender.role === 'TEACHER') {
       if (!(await userTeachesStudent(db, sender.id, studentId))) {
         throw forbidden('This student is not in one of your classes');
       }
-      const links = await db.studentParent.count({
-        where: { studentId, parent: { userId: { in: wanted }, deletedAt: null } },
-      });
-      if (links !== wanted.length) throw forbidden('Recipients must be parents of this student');
-      break;
+    } else if (ADMIN_SIDE.includes(sender.role)) {
+      const student = await db.student.findFirst({ where: { id: studentId, deletedAt: null } });
+      if (!student) throw new AppError('Student not found', 400);
     }
-    case 'PARENT': {
-      if (roles.some((r) => r !== 'TEACHER' && !ADMIN_SIDE.includes(r))) throw forbidden();
-      if (studentId) await assertParentOfStudent(sender.id, studentId);
-
-      const teachers = recipients.filter((r) => r.role === 'TEACHER');
-      if (teachers.length) {
-        if (!studentId) throw new AppError('studentId is required when a parent writes to teachers', 400);
-        for (const t of teachers) {
-          if (!(await userTeachesStudent(db, t.id, studentId))) {
-            throw forbidden('This teacher does not teach your child');
-          }
-        }
-      }
-      break;
-    }
-    default:
-      throw forbidden();
   }
   return recipients;
 };
 
-// People the current user may write to (feeds the "recipient" picker of the frontend)
-export const listContacts = async (user, { studentId, search } = {}) => {
-  const nameFilter = search
-    ? { OR: ['firstName', 'lastName'].map((f) => ({ [f]: { contains: search, mode: 'insensitive' } })) }
-    : {};
-  const toContact = (u, extra = {}) => ({ userId: u.id, name: fullName(u), role: u.role, ...extra });
+// A group audience -> the user records it reaches (the rule is checked here)
+export const resolveAudience = async (db, sender, audience) => {
+  const { type } = audience;
+  if (!(GROUPS[sender.role] ?? []).includes(type)) throw forbidden();
 
-  if (ADMIN_SIDE.includes(user.role)) {
-    const users = await prisma.user.findMany({
-      where: { ...activeUser, role: { in: ['PARENT', 'STUDENT'] }, ...nameFilter },
-      select: userBrief, orderBy: { lastName: 'asc' }, take: 100,
-    });
-    return users.map((u) => toContact(u));
-  }
+  let where;
+  if (type === 'CLASS') {
+    const { classId } = audience;
+    const cls = await db.schoolClass.findFirst({ where: { id: classId, deletedAt: null } });
+    if (!cls) throw new AppError('Class not found', 400);
 
-  if (user.role === 'STUDENT') {
-    const users = await prisma.user.findMany({
-      where: { ...activeUser, role: { in: ADMIN_SIDE } }, select: userBrief, orderBy: { lastName: 'asc' },
-    });
-    return users.map((u) => toContact(u));
-  }
-
-  if (user.role === 'TEACHER') {
-    const classIds = await getTeacherClassIds(user.id);
-    const links = await prisma.studentParent.findMany({
-      where: {
-        ...(studentId && { studentId }),
-        student: { deletedAt: null, enrollments: { some: { classId: { in: classIds }, deletedAt: null } } },
-        parent: { deletedAt: null, user: { ...activeUser, ...nameFilter } },
-      },
-      include: {
-        student: { select: { id: true, firstName: true, lastName: true } },
-        parent: { include: { user: { select: userBrief } } },
-      },
-      take: 200,
-    });
-
-    const byUser = new Map();
-    for (const l of links) {
-      const u = l.parent.user;
-      const contact = byUser.get(u.id) ?? toContact(u, { students: [] });
-      contact.students.push({ id: l.student.id, name: fullName(l.student) });
-      byUser.set(u.id, contact);
+    if (sender.role === 'TEACHER') {
+      if (!(await getTeacherClassIds(sender.id)).includes(classId)) throw forbidden('This is not one of your classes');
     }
-    return [...byUser.values()];
+    if (sender.role === 'STUDENT') {
+      const own = await db.enrollment.findFirst({
+        where: { classId, deletedAt: null, student: { userId: sender.id, deletedAt: null } },
+      });
+      if (!own) throw forbidden('You can only write to your own class');
+    }
+    where = { role: 'STUDENT', student: { deletedAt: null, enrollments: { some: { classId, deletedAt: null } } } };
+  } else if (type === 'ALL_TEACHERS') {
+    where = { role: 'TEACHER', teacher: { deletedAt: null } };
+  } else if (type === 'ALL_PARENTS') {
+    const filters = await scopeFilters(db, sender); // a teacher only reaches the parents of their classes
+    where = { role: 'PARENT', ...(filters.PARENT ?? {}) };
+  } else {
+    where = { role: { in: EVERYONE_ROLES[sender.role] ?? EVERYONE_ROLES.default } };
   }
 
-  if (user.role === 'PARENT') {
-    const kids = await prisma.studentParent.findMany({
-      where: {
-        parent: { userId: user.id, deletedAt: null },
-        student: { deletedAt: null },
-        ...(studentId && { studentId }),
-      },
-      include: {
-        student: {
-          select: {
-            id: true, firstName: true, lastName: true,
-            enrollments: { where: { deletedAt: null }, select: { classId: true } },
-          },
-        },
-      },
+  const users = await db.user.findMany({
+    where: { ...activeUser, id: { not: sender.id }, ...where },
+    select: userBrief,
+    take: MAX_AUDIENCE + 1,
+  });
+  if (users.length === 0) throw new AppError('No recipients in this audience', 400);
+  if (users.length > MAX_AUDIENCE) throw new AppError(`Audience too large (maximum ${MAX_AUDIENCE})`, 400);
+  return users;
+};
+
+// Feeds the "recipient" picker: people the user may write to (filter by role and name)
+export const listContacts = async (user, { search, role } = {}) => {
+  const allowed = ROLE_TARGETS[user.role] ?? [];
+  const roles = role ? allowed.filter((r) => r === role) : allowed;
+  if (!roles.length) return [];
+
+  const filters = await scopeFilters(prisma, user);
+  const nameFilter = search
+    ? [{ OR: ['firstName', 'lastName'].map((f) => ({ [f]: { contains: search, mode: 'insensitive' } })) }]
+    : [];
+
+  const users = await prisma.user.findMany({
+    where: {
+      ...activeUser, id: { not: user.id },
+      AND: [{ OR: recipientWhere(roles, filters) }, ...nameFilter],
+    },
+    select: userBrief,
+    orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    take: 100,
+  });
+  return users.map((u) => ({ userId: u.id, name: fullName(u), role: u.role }));
+};
+
+// Roles, groups and classes the user can pick in the composer
+export const listAudiences = async (user) => {
+  const groups = GROUPS[user.role] ?? [];
+  let classes = [];
+  if (groups.includes('CLASS')) {
+    const where = { deletedAt: null, schoolYear: { isCurrent: true } };
+    if (user.role === 'TEACHER') where.id = { in: await getTeacherClassIds(user.id) };
+    if (user.role === 'STUDENT') {
+      where.enrollments = { some: { deletedAt: null, student: { userId: user.id, deletedAt: null } } };
+    }
+    const rows = await prisma.schoolClass.findMany({
+      where, orderBy: [{ level: 'asc' }, { section: 'asc' }], select: { id: true, level: true, section: true },
     });
-    const classIds = [...new Set(kids.flatMap((k) => k.student.enrollments.map((e) => e.classId)))];
-
-    const [teachers, staff] = await Promise.all([
-      prisma.teacher.findMany({
-        where: {
-          deletedAt: null, user: activeUser,
-          OR: [
-            { homeroomClasses: { some: { id: { in: classIds }, deletedAt: null } } },
-            { assignments: { some: { classId: { in: classIds }, deletedAt: null } } },
-          ],
-        },
-        include: {
-          user: { select: userBrief },
-          homeroomClasses: { select: { id: true } },
-          assignments: { where: { deletedAt: null }, select: { classId: true } },
-        },
-      }),
-      prisma.user.findMany({
-        where: { ...activeUser, role: { in: ADMIN_SIDE } }, select: userBrief, orderBy: { lastName: 'asc' },
-      }),
-    ]);
-
-    return [
-      ...teachers.map((t) => {
-        const taught = new Set([...t.homeroomClasses.map((c) => c.id), ...t.assignments.map((a) => a.classId)]);
-        const students = kids
-          .filter((k) => k.student.enrollments.some((e) => taught.has(e.classId)))
-          .map((k) => ({ id: k.student.id, name: fullName(k.student) }));
-        return toContact(t.user, { students });
-      }),
-      ...staff.map((u) => toContact(u)),
-    ];
+    classes = rows.map((c) => ({ id: c.id, label: `${c.level} ${c.section}` }));
   }
-
-  return [];
+  return { roles: ROLE_TARGETS[user.role] ?? [], groups, classes };
 };

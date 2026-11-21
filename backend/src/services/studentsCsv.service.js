@@ -3,6 +3,7 @@ import { parse } from 'csv-parse/sync';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { allocateMatricules, createStudentRecord } from './students.service.js';
+import { MIN_STUDENT_AGE, isOldEnough } from '../utils/age.js';
 
 // ---------- Export ----------
 
@@ -118,6 +119,7 @@ export const importStudentsCsv = async (buffer, userId) => {
 
     const date = new Date(r.birthDate);
     if (Number.isNaN(date.getTime()) || date >= new Date()) return fail('birthDate', 'Invalid or future date');
+    if (!isOldEnough(date)) return fail('birthDate', `Student must be at least ${MIN_STUDENT_AGE} years old`);
 
     const key = dupKey(r.lastName, r.firstName, r.birthDate);
     if (seen.has(key)) return fail('lastName', 'Possible duplicate student');
