@@ -194,7 +194,7 @@ export const listContacts = async (user, { search, role } = {}) => {
     },
     select: userBrief,
     orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-    take: 100,
+    take: 200,
   });
   return users.map((u) => ({ userId: u.id, name: fullName(u), role: u.role }));
 };

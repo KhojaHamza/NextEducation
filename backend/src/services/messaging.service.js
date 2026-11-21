@@ -148,7 +148,7 @@ export const saveMessage = async (user, input) => {
 
     if (isDraft) {
       const message = await tx.message.create({
-        data: { ...data, status: 'DRAFT', recipients: { create: unique.map((userId) => ({ userId })) } },
+        data: { ...data, status: 'DRAFT', recipients: { create: unique.map((userId) => ({ userId, schoolId: user.schoolId })) } },
         include: messageInclude,
       });
       await logAudit(tx, {
@@ -164,7 +164,7 @@ export const saveMessage = async (user, input) => {
     const message = await tx.message.create({
       data: {
         ...data, status: 'SENT', sentAt: new Date(),
-        recipients: { create: unique.map((userId) => ({ userId })) },
+        recipients: { create: unique.map((userId) => ({ userId, schoolId: user.schoolId })) },
       },
       include: messageInclude,
     });
