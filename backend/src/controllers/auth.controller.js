@@ -2,8 +2,14 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import * as authService from '../services/auth.service.js';
 
 export const login = asyncHandler(async (req, res) => {
+  const { schoolCode, email, password } = req.body;
+  const result = await authService.login(schoolCode, email, password);
+  res.json({ status: 'success', ...result });
+});
+
+export const platformLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const result = await authService.login(email, password);
+  const result = await authService.platformLogin(email, password);
   res.json({ status: 'success', ...result });
 });
 

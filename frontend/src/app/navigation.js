@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  CalendarRange,
   CircleAlert,
   ClipboardCheck,
   ClipboardList,
@@ -11,6 +12,7 @@ import {
   GraduationCap,
   House,
   Megaphone,
+  NotebookPen,
   MessageCircle,
   Presentation,
   School,
@@ -73,7 +75,12 @@ const accountantPages = [
   { to: '/comptabilite/frais', label: 'Frais scolaires', icon: Wallet },
 ];
 
+const homeworkPages = [
+  { to: '/devoirs', label: 'Devoirs', icon: NotebookPen },
+];
+
 const sharedPages = [
+  { to: '/calendrier', label: 'Calendrier', icon: CalendarRange },
   { to: '/messages', label: 'Messages', icon: MessageCircle },
   { to: '/annonces', label: 'Annonces', icon: Megaphone },
 ];
@@ -85,5 +92,6 @@ export const navigationFor = (role) => [
   ...(role === 'PARENT' ? parentPages : []),
   ...(role === 'STUDENT' ? studentPages : []),
   ...(role === 'ACCOUNTANT' ? accountantPages : []),
+  ...(role !== 'ACCOUNTANT' ? homeworkPages : []),
   ...sharedPages,
 ];

@@ -2,7 +2,7 @@ import path from 'node:path';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { logAudit } from '../core/audit.service.js';
-import { assertCanMessage } from './messageAccess.service.js';
+import { assertCanMessage, loadRecipients, resolveAudience } from './messageAccess.service.js';
 import { deliver } from './delivery.service.js';
 import { deleteFile, inspectFile, openFile, saveFile } from './storage.service.js';
 
@@ -17,6 +17,14 @@ export const messageInclude = {
   attachments: { select: { id: true, fileName: true, mimeType: true, size: true } },
 };
 
+// Large broadcasts: other people's names are never listed
+const visibleRecipients = (m, viewerId) => {
+  if (m.status !== 'SENT' || m.recipients.length <= 5) return m.recipients;
+  return m.senderId === viewerId
+    ? m.recipients.slice(0, 5)
+    : m.recipients.filter((r) => r.user.id === viewerId);
+};
+
 export const shapeMessage = (m, viewerId) => ({
   id: m.id,
   threadId: m.threadId ?? m.id,
@@ -28,7 +36,8 @@ export const shapeMessage = (m, viewerId) => ({
   mine: m.senderId === viewerId,
   sender: { id: m.sender.id, name: fullName(m.sender), role: m.sender.role },
   student: m.student ? { id: m.student.id, name: fullName(m.student) } : null,
-  recipients: m.recipients.map((r) => ({
+  recipientCount: m.recipients.length,
+  recipients: visibleRecipients(m, viewerId).map((r) => ({
     userId: r.user.id, name: fullName(r.user), role: r.user.role,
     // read receipts are visible to the sender only
     ...(m.senderId === viewerId && { readAt: r.readAt }),
@@ -104,7 +113,26 @@ export const saveMessage = async (user, input) => {
       participants = info.participants;
       subject = info.root.subject;
       studentId = info.root.studentId ?? undefined;
-      recipientIds = recipientIds ?? [...participants].filter((id) => id !== user.id);
+      if (!recipientIds) {
+        const answered = await tx.message.findFirst({
+          where: { id: input.replyToId },
+          select: { senderId: true, recipients: { select: { userId: true } } },
+        });
+        recipientIds = answered.senderId !== user.id
+          ? [answered.senderId]
+          : answered.recipients.map((r) => r.userId);
+        if (recipientIds.length > 50) {
+          throw new AppError('Reply to a specific person: this message has too many recipients', 400);
+        }
+      }
+    }
+
+    let audienceUsers = null;
+    if (input.audience) {
+      if (isDraft) throw new AppError('Drafts cannot use a group audience', 400);
+      if (input.replyToId) throw new AppError('A reply cannot use a group audience', 400);
+      audienceUsers = await resolveAudience(tx, user, input.audience);
+      recipientIds = audienceUsers.map((u) => u.id);
     }
 
     const unique = [...new Set(recipientIds ?? [])];
@@ -120,7 +148,7 @@ export const saveMessage = async (user, input) => {
 
     if (isDraft) {
       const message = await tx.message.create({
-        data: { ...data, status: 'DRAFT', recipients: { create: unique.map((userId) => ({ userId })) } },
+        data: { ...data, status: 'DRAFT', recipients: { create: unique.map((userId) => ({ userId, schoolId: user.schoolId })) } },
         include: messageInclude,
       });
       await logAudit(tx, {
@@ -130,12 +158,13 @@ export const saveMessage = async (user, input) => {
     }
 
     if (!unique.length) throw new AppError('At least one recipient is required', 400);
-    const recipients = await assertCanMessage(tx, user, unique, studentId);
+    const recipients = audienceUsers
+      ?? (threadId ? await loadRecipients(tx, unique) : await assertCanMessage(tx, user, unique, studentId));
 
     const message = await tx.message.create({
       data: {
         ...data, status: 'SENT', sentAt: new Date(),
-        recipients: { create: unique.map((userId) => ({ userId })) },
+        recipients: { create: unique.map((userId) => ({ userId, schoolId: user.schoolId })) },
       },
       include: messageInclude,
     });
@@ -160,7 +189,9 @@ export const sendDraft = async (user, id) => {
     if (!draft.subject.trim() || !draft.body.trim() || !ids.length) {
       throw new AppError('Subject, body and at least one recipient are required to send', 400);
     }
-    const recipients = await assertCanMessage(tx, user, ids, draft.studentId ?? undefined);
+    const recipients = draft.threadId
+      ? await loadRecipients(tx, ids)
+      : await assertCanMessage(tx, user, ids, draft.studentId ?? undefined);
 
     // Claims the draft atomically: a double click cannot send it twice
     const claimed = await tx.message.updateMany({
@@ -168,7 +199,7 @@ export const sendDraft = async (user, id) => {
     });
     if (claimed.count === 0) throw new AppError('This message was already sent', 409);
 
-    const message = await tx.message.findUnique({ where: { id }, include: messageInclude });
+    const message = await tx.message.findFirst({ where: { id }, include: messageInclude });
     const content = await notifyInApp(tx, user, message, recipients);
     await logAudit(tx, {
       userId: user.id, action: 'UPDATE', entity: 'Message', entityId: id, newValues: auditMeta(message, ids),

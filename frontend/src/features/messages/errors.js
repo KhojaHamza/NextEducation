@@ -21,6 +21,13 @@ const known = {
   'Attachments cannot be added to a sent message': 'Impossible d’ajouter une pièce jointe à un message envoyé.',
   'Attach at least one file in the "files" field': 'Choisis au moins un fichier.',
   'Attachment not found': 'Pièce jointe introuvable.',
+  'You can only write to people connected to you (your classes, children or teachers)': 'Tu ne peux écrire qu’aux personnes liées à toi (tes classes, tes enfants, tes enseignants).',
+  'This is not one of your classes': 'Ce n’est pas une de tes classes.',
+  'You can only write to your own class': 'Tu ne peux écrire qu’à ta propre classe.',
+  'Class not found': 'Cette classe est introuvable.',
+  'No recipients in this audience': 'Personne ne correspond à ce groupe.',
+  'Drafts cannot use a group audience': 'Un message à un groupe ne peut pas être enregistré en brouillon.',
+  'Reply to a specific person: this message has too many recipients': 'Réponds à une personne précise : ce message a trop de destinataires.',
   'Invalid id': 'Identifiant invalide.',
 };
 

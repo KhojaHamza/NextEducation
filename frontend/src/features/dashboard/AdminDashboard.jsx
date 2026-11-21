@@ -88,6 +88,12 @@ export default function AdminDashboard() {
               Classes
             </Button>
           </Link>
+          <Link to="/admin/tableau-pedagogique">
+            <Button variant="secondary">
+              <GraduationCap className="size-4" aria-hidden="true" />
+              Tableau pédagogique
+            </Button>
+          </Link>
           <Link to="/admin/annees">
             <Button variant="secondary">
               <CalendarDays className="size-4" aria-hidden="true" />

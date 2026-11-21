@@ -7,22 +7,28 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import { optionalInt } from '../utils/query.js';
-import { listContacts } from '../services/messageAccess.service.js';
+import { listAudiences, listContacts } from '../services/messageAccess.service.js';
 import * as messaging from '../services/messaging.service.js';
 
 const positiveId = z.number().int().positive();
+
+const audienceSchema = z.union([
+  z.object({ type: z.literal('CLASS'), classId: positiveId }),
+  z.object({ type: z.enum(['ALL_TEACHERS', 'ALL_PARENTS', 'EVERYONE']) }),
+]);
 
 const sendSchema = z
   .object({
     subject: z.string().trim().min(1).max(150).optional(),
     body: z.string().trim().min(1).max(5000),
-    recipientIds: z.array(positiveId).min(1).max(50).optional(),
+    recipientIds: z.array(positiveId).min(1).max(200).optional(),
     studentId: positiveId.optional(),
     important: z.boolean().optional(),
     replyToId: positiveId.optional(),
+    audience: audienceSchema.optional(),
     draft: z.literal(false).optional(),
   })
-  .refine((d) => d.replyToId || (d.subject && d.recipientIds), {
+  .refine((d) => d.replyToId || (d.subject && (d.recipientIds || d.audience)), {
     message: 'subject and recipientIds are required for a new message',
     path: ['subject'],
   });
@@ -31,7 +37,7 @@ const sendSchema = z
 const draftSchema = z.object({
   subject: z.string().trim().max(150).optional(),
   body: z.string().trim().max(5000).optional(),
-  recipientIds: z.array(positiveId).max(50).optional(),
+  recipientIds: z.array(positiveId).max(200).optional(),
   studentId: positiveId.optional(),
   important: z.boolean().optional(),
   replyToId: positiveId.optional(),
@@ -42,7 +48,7 @@ const updateSchema = z
   .object({
     subject: z.string().trim().max(150),
     body: z.string().trim().max(5000),
-    recipientIds: z.array(positiveId).max(50),
+    recipientIds: z.array(positiveId).max(200),
     studentId: positiveId.nullable(),
     important: z.boolean(),
   })
@@ -68,7 +74,13 @@ const validId = (req, res, next, v) =>
 router.get('/contacts', asyncHandler(async (req, res) => {
   const studentId = optionalInt(req.query.studentId, 'studentId');
   const search = req.query.search ? String(req.query.search).slice(0, 50) : undefined;
-  res.json({ status: 'success', data: await listContacts(req.user, { studentId, search }) });
+  const roles = ['ADMIN', 'TEACHER', 'PARENT', 'STUDENT', 'ACCOUNTANT'];
+  const role = roles.includes(req.query.role) ? req.query.role : undefined;
+  res.json({ status: 'success', data: await listContacts(req.user, { studentId, search, role }) });
+}));
+
+router.get('/audiences', asyncHandler(async (req, res) => {
+  res.json({ status: 'success', data: await listAudiences(req.user) });
 }));
 
 router.get('/threads', asyncHandler(async (req, res) => {

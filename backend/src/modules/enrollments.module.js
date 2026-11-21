@@ -37,7 +37,7 @@ router.get('/', authorize(...readRoles), asyncHandler(async (req, res) => {
 router.post('/', authorize(...writeRoles), validate(createSchema), asyncHandler(async (req, res) => {
   const record = await prisma.$transaction(async (tx) => {
     const e = await enrollStudent(tx, req.body);
-    const full = await tx.enrollment.findUnique({ where: { id: e.id }, include });
+    const full = await tx.enrollment.findFirst({ where: { id: e.id }, include });
     await logAudit(tx, { userId: req.user.id, action: 'CREATE', entity: 'Enrollment', entityId: e.id, newValues: full });
     return full;
   });
@@ -47,9 +47,9 @@ router.post('/', authorize(...writeRoles), validate(createSchema), asyncHandler(
 router.patch('/:id', authorize(...writeRoles), validate(transferSchema), asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const record = await prisma.$transaction(async (tx) => {
-    const before = await tx.enrollment.findUnique({ where: { id } });
+    const before = await tx.enrollment.findFirst({ where: { id } });
     await transferEnrollment(tx, { enrollmentId: id, classId: req.body.classId });
-    const after = await tx.enrollment.findUnique({ where: { id }, include });
+    const after = await tx.enrollment.findFirst({ where: { id }, include });
     await logAudit(tx, { userId: req.user.id, action: 'UPDATE', entity: 'Enrollment', entityId: id, oldValues: before, newValues: after });
     return after;
   });

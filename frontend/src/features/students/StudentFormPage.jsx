@@ -12,10 +12,11 @@ import TextAreaField from '../../components/ui/TextAreaField.jsx';
 import TextField from '../../components/ui/TextField.jsx';
 import { useToast } from '../../hooks/useToast.js';
 import { messageFor } from './errors.js';
+import { latestBirthDate, MIN_STUDENT_AGE } from './age.js';
 import { classLabel } from './format.js';
 import { useClassOptions, useStudent, useStudentMutations } from './hooks.js';
 
-const today = new Date().toISOString().slice(0, 10);
+const maxBirthDate = latestBirthDate();
 
 const schema = z.object({
   lastName: z.string().trim().min(1, 'Saisis le nom.').max(60, '60 caractères maximum.'),
@@ -23,7 +24,8 @@ const schema = z.object({
   birthDate: z
     .string()
     .min(1, 'Saisis la date de naissance.')
-    .refine((value) => new Date(value) < new Date(), 'La date de naissance doit être dans le passé.'),
+    .refine((value) => new Date(value) < new Date(), 'La date de naissance doit être dans le passé.')
+    .refine((value) => value <= maxBirthDate, `L’élève doit avoir au moins ${MIN_STUDENT_AGE} ans.`),
   gender: z.enum(['MALE', 'FEMALE'], { error: 'Choisis le genre.' }),
   medicalNotes: z.string().trim().max(1000, '1000 caractères maximum.'),
   classId: z.string(),
@@ -95,7 +97,7 @@ function StudentForm({ student }) {
         <TextField
           label="Date de naissance"
           type="date"
-          max={today}
+          max={maxBirthDate}
           error={errors.birthDate?.message}
           {...register('birthDate')}
         />

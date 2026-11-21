@@ -42,7 +42,8 @@ export default function ThreadPage() {
     try {
       const messages = thread.data ?? [];
       const last = messages[messages.length - 1];
-      await send.mutateAsync({ replyToId: last.id, body: reply.trim(), draft: false });
+      const target = [...messages].reverse().find((m) => !m.mine) ?? last;
+      await send.mutateAsync({ replyToId: target.id, body: reply.trim(), draft: false });
       setReply('');
     } catch (err) {
       setServerError(messageFor(err));
@@ -93,6 +94,7 @@ export default function ThreadPage() {
             {m.recipients.length > 0 && (
               <p className="mt-1 text-sm text-ink/70">
                 À : {m.recipients.map((r) => r.name).join(', ')}
+                {m.recipientCount > m.recipients.length && ` et ${m.recipientCount - m.recipients.length} autre(s)`}
                 {m.mine && m.recipients.some((r) => r.readAt) && (
                   <span className="ms-2">· lu</span>
                 )}

@@ -10,6 +10,21 @@ import { useToast } from '../../hooks/useToast.js';
 import { messageFor } from './errors.js';
 import { useSubjectMutations } from './hooks.js';
 
+const SUBJECT_SUGGESTIONS = [
+  'Sport',
+  'Français',
+  'Anglais',
+  'Sciences',
+  'Mathématiques',
+  'Arabe',
+  'Histoire-Géographie',
+  'Dessin',
+  'Musique',
+  'Éducation islamique',
+];
+
+const LEVEL_SUGGESTIONS = ['CP', '1', '2', '3', '4', '5', '6'];
+
 const schema = z.object({
   name: z.string().trim().min(1, 'Saisis le nom de la matière.').max(80, '80 caractères maximum.'),
   level: z.string().trim().min(1, 'Saisis le niveau.').max(20, '20 caractères maximum.'),
@@ -58,10 +73,22 @@ function SubjectForm({ record, onClose }) {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       {serverError && <Alert tone="danger">{serverError}</Alert>}
 
+      <datalist id="subject-names">
+        {SUBJECT_SUGGESTIONS.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+      <datalist id="level-names">
+        {LEVEL_SUGGESTIONS.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+
       <TextField
         label="Nom de la matière"
-        hint="Par exemple Mathématiques."
+        hint="Choisis dans la liste ou écris une autre matière."
         autoComplete="off"
+        list="subject-names"
         error={errors.name?.message}
         {...register('name')}
       />
@@ -74,8 +101,9 @@ function SubjectForm({ record, onClose }) {
       ) : (
         <TextField
           label="Niveau"
-          hint="Le même que celui de la classe : par exemple CP, CE1, CE2."
+          hint="Le même que celui de la classe : par exemple CP, 1, 2, 3."
           autoComplete="off"
+          list="level-names"
           error={errors.level?.message}
           {...register('level')}
         />

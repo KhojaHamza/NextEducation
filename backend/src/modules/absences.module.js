@@ -101,8 +101,8 @@ router.post('/', authorize('ADMIN', 'TEACHER'), validate(createSchema), asyncHan
     if (!enrollment) throw new AppError(`Student is not enrolled in ${year.label}`, 400);
     await assertCanAccessClass(req.user, enrollment.classId);
 
-    const existing = await tx.absence.findUnique({
-      where: { studentId_date_period: { studentId, date, period } },
+    const existing = await tx.absence.findFirst({
+      where: { studentId, date, period },
     });
     if (existing && !existing.deletedAt) throw new AppError('This absence is already recorded', 409);
 

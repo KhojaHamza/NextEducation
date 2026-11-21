@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client.js';
+import { buildQuery } from '../../api/queries.js';
 
 export const useThreads = () =>
   useQuery({
@@ -37,10 +38,22 @@ export const useUnreadCount = () =>
     staleTime: 30 * 1000,
   });
 
-export const useContacts = () =>
+// People the user may write to. params: { role, search } (empty values are skipped)
+export const useContacts = ({ role, search } = {}, enabled = true) =>
   useQuery({
-    queryKey: ['messages', 'contacts'],
-    queryFn: ({ signal }) => api('/messages/contacts', { signal }).then((r) => r.data),
+    queryKey: ['messages', 'contacts', role ?? '', search ?? ''],
+    enabled,
+    queryFn: ({ signal }) =>
+      api(`/messages/contacts${buildQuery({ role, search })}`, { signal }).then((r) => r.data),
+    staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
+
+// { roles: [...], groups: ['CLASS', ...], classes: [{ id, label }] }
+export const useAudiences = () =>
+  useQuery({
+    queryKey: ['messages', 'audiences'],
+    queryFn: ({ signal }) => api('/messages/audiences', { signal }).then((r) => r.data),
     staleTime: 5 * 60 * 1000,
   });
 

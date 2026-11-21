@@ -4,7 +4,7 @@ import { AppError } from '../utils/AppError.js';
 
 export const userSelect = {
   id: true, email: true, firstName: true, lastName: true, phone: true,
-  role: true, isActive: true, mustChangePassword: true, createdAt: true,
+  role: true, isActive: true, mustChangePassword: true, createdAt: true, schoolId: true,
 };
 
 export const generateTempPassword = () => {
@@ -13,8 +13,9 @@ export const generateTempPassword = () => {
   return `${body}${crypto.randomInt(10, 100)}`;
 };
 
+// `tx` is a transaction from the extended client: findFirst and create get schoolId automatically.
 export const createUserAccount = async (tx, { email, firstName, lastName, phone, role }) => {
-  const exists = await tx.user.findUnique({ where: { email } });
+  const exists = await tx.user.findFirst({ where: { email } });
   if (exists) throw new AppError('This email is already used (possibly by an archived account)', 409);
 
   const tempPassword = generateTempPassword();
@@ -24,7 +25,7 @@ export const createUserAccount = async (tx, { email, firstName, lastName, phone,
       passwordHash: await bcrypt.hash(tempPassword, 10),
       mustChangePassword: true,
     },
-    select: userSelect, // never returns or logs the hash
+    select: userSelect,
   });
   return { user, tempPassword };
 };

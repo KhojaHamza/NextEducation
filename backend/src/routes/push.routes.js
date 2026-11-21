@@ -32,11 +32,17 @@ router.post('/subscribe', validate(subscribeSchema), asyncHandler(async (req, re
   const userAgent = req.headers['user-agent']?.slice(0, 200);
 
   // The same browser can be reused by another account: the endpoint moves to the new user
-  await prisma.pushSubscription.upsert({
-    where: { endpoint },
-    update: { userId: req.user.id, p256dh: keys.p256dh, auth: keys.auth, userAgent },
-    create: { userId: req.user.id, endpoint, p256dh: keys.p256dh, auth: keys.auth, userAgent },
-  });
+  const existingSub = await prisma.pushSubscription.findFirst({ where: { endpoint } });
+  if (existingSub) {
+    await prisma.pushSubscription.update({
+      where: { id: existingSub.id },
+      data: { userId: req.user.id, p256dh: keys.p256dh, auth: keys.auth, userAgent },
+    });
+  } else {
+    await prisma.pushSubscription.create({
+      data: { userId: req.user.id, endpoint, p256dh: keys.p256dh, auth: keys.auth, userAgent },
+    });
+  }
 
   const mine = await prisma.pushSubscription.findMany({
     where: { userId: req.user.id }, orderBy: { id: 'desc' }, select: { id: true },
